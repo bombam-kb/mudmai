@@ -1,0 +1,436 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Locale {
+  th
+  en
+}
+
+enum PillarType {
+  CAREER
+  PERSONAL
+  FINANCE
+  RELATIONSHIPS
+  MENTAL_HEALTH
+  PHYSICAL_HEALTH
+}
+
+enum GoalStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+enum VisionItemType {
+  TEXT
+  IMAGE
+  DRAWING
+}
+
+enum ReminderCadence {
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+}
+
+enum ReminderChannel {
+  IN_APP
+  BROWSER
+  LINE
+}
+
+enum NudgeTrigger {
+  LOW_MENTAL_SCORE
+  LOW_CAREER_SCORE
+  TASK_SLUMP
+}
+
+enum ReferralEventType {
+  DISCOUNT_APPLIED
+  REFERRAL_PAID
+  POINTS_EARNED
+  POINTS_REDEEMED
+  REJECTED_SELF
+  REJECTED_DUPLICATE
+}
+
+/// Profile row; `id` matches Supabase Auth `auth.users.id`.
+model User {
+  id                 String   @id @db.Uuid
+  email              String   @unique
+  name               String
+  preferredLocale    Locale    @default(th)
+  onboardingComplete Boolean   @default(false)
+  timezone           String    @default("Asia/Bangkok")
+  pdpaConsentAt      DateTime?
+  pdpaConsentVersion String?
+  referralCode       String?  @unique
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  reminderPrefs     ReminderPreference[]
+  reminderLogs      ReminderLog[]
+  reflections       PastYearReflection[]
+  visionCanvases    VisionCanvas[]
+  visionBoard       VisionBoardItem[]
+  goals             QuarterlyGoal[]
+  todos             DailyTodo[]
+  moods             DailyMood[]
+  monthlyPlans      MonthlyPlan[]
+  monthlyReviews    MonthlyReview[]
+  quarterlyReviews  QuarterlyReview[]
+  aiNudges          AiNudgeLog[]
+  checkouts         BillingCheckout[]
+  referralsGiven    Referral[]         @relation("ReferralsGiven")
+  referralReceived  Referral?          @relation("ReferralsReceived")
+  pointsLedger      PointsLedger[]
+  lineAccount       LineAccount?
+}
+
+/// LINE Official Account + Login mapping. `lineUserId` is the Messaging API / ID token `sub`.
+model LineAccount {
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @unique @db.Uuid
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lineUserId     String    @unique
+  reachable      Boolean   @default(false)
+  reminderOptIn  Boolean   @default(true)
+  broadcastOptIn Boolean   @default(false)
+  friendAt       DateTime?
+  unfollowedAt   DateTime?
+  linkedAt       DateTime  @default(now())
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([reachable, reminderOptIn])
+}
+
+model LineWebhookEvent {
+  id        String   @id
+  createdAt DateTime @default(now())
+}
+
+enum BillingPlan {
+  FOUNDER
+  YEARLY
+}
+
+enum BillingStatus {
+  PENDING
+  PAID
+}
+
+model BillingCheckout {
+  id            String        @id @default(uuid()) @db.Uuid
+  userId        String        @db.Uuid
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan          BillingPlan
+  listPriceThb  Int?
+  discountThb   Int           @default(0)
+  amountThb     Int
+  paidViaPoints Boolean       @default(false)
+  status        BillingStatus @default(PENDING)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  referral Referral?
+
+  @@index([userId, createdAt])
+}
+
+/// One row per new account that signed up through someone else's referral link.
+model Referral {
+  id              String    @id @default(uuid()) @db.Uuid
+  affiliateUserId String    @db.Uuid
+  affiliateUser   User      @relation("ReferralsGiven", fields: [affiliateUserId], references: [id], onDelete: Cascade)
+  referredUserId  String    @unique @db.Uuid
+  referredUser    User      @relation("ReferralsReceived", fields: [referredUserId], references: [id], onDelete: Cascade)
+  codeUsed        String
+  discountThb     Int
+  checkoutId      String?   @unique @db.Uuid
+  checkout        BillingCheckout? @relation(fields: [checkoutId], references: [id], onDelete: SetNull)
+  /// Set only once the linked checkout is confirmed PAID — this is what unlocks affiliate points.
+  paidAt          DateTime?
+  pointsAwarded   Int       @default(0)
+  createdAt       DateTime  @default(now())
+
+  events       ReferralEventLog[]
+  pointsLedger PointsLedger[]
+
+  @@index([affiliateUserId])
+}
+
+/// Append-only wallet history. Balance is derived by summing `delta`, snapshotted per row for cheap reads.
+model PointsLedger {
+  id           String            @id @default(uuid()) @db.Uuid
+  userId       String            @db.Uuid
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  delta        Int
+  reason       ReferralEventType
+  referralId   String?           @db.Uuid
+  referral     Referral?         @relation(fields: [referralId], references: [id], onDelete: SetNull)
+  checkoutId   String?           @db.Uuid
+  balanceAfter Int
+  /// Calendar year of createdAt — indexed to enforce "one free renewal redemption per year".
+  periodYear   Int
+  createdAt    DateTime          @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, reason, periodYear])
+}
+
+/// Full referral audit trail, including blocked/rejected attempts that never produce a Referral row.
+model ReferralEventLog {
+  id              String            @id @default(uuid()) @db.Uuid
+  type            ReferralEventType
+  userId          String?           @db.Uuid
+  affiliateUserId String?           @db.Uuid
+  referralId      String?           @db.Uuid
+  referral        Referral?         @relation(fields: [referralId], references: [id], onDelete: SetNull)
+  metadata        Json?
+  createdAt       DateTime          @default(now())
+
+  @@index([userId, createdAt])
+  @@index([affiliateUserId, createdAt])
+}
+
+model ReminderPreference {
+  id         String          @id @default(uuid()) @db.Uuid
+  userId     String          @db.Uuid
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cadence    ReminderCadence
+  enabled    Boolean         @default(true)
+  hour       Int             @default(21)
+  minute     Int             @default(0)
+  weekday    Int?
+  channel    ReminderChannel @default(IN_APP)
+  lastSentAt DateTime?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@unique([userId, cadence])
+}
+
+model ReminderLog {
+  id      String          @id @default(uuid()) @db.Uuid
+  userId  String          @db.Uuid
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cadence ReminderCadence
+  channel ReminderChannel
+  title   String
+  body    String          @db.Text
+  isRead  Boolean         @default(false)
+  sentAt  DateTime        @default(now())
+
+  @@index([userId, sentAt])
+}
+
+model PastYearReflection {
+  id                   String   @id @default(uuid()) @db.Uuid
+  userId               String   @db.Uuid
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  year                 Int      /// Active calendar year being planned (story fields are about last year)
+  lastYearStory        String   @db.Text
+  happiestMoment       String   @db.Text
+  keyLearnings         String   @db.Text
+  healingThings        String   @db.Text
+  expectationsNextYear String   @db.Text
+  ratingCareer         Int
+  ratingPersonal       Int
+  ratingFinance        Int
+  ratingRelationships  Int
+  ratingMental         Int
+  ratingPhysical       Int
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@unique([userId, year])
+}
+
+model VisionCanvas {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  year       Int
+  canvasJson Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, year])
+}
+
+model VisionBoardItem {
+  id          String         @id @default(uuid()) @db.Uuid
+  userId      String         @db.Uuid
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  year        Int
+  pillar      PillarType
+  type        VisionItemType
+  contentUrl  String?
+  textContent String?        @db.Text
+  posX        Float
+  posY        Float
+  width       Float          @default(200)
+  height      Float          @default(200)
+  rotation    Float          @default(0)
+  zIndex      Int            @default(1)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([userId, year])
+}
+
+model QuarterlyGoal {
+  id              String     @id @default(uuid()) @db.Uuid
+  userId          String     @db.Uuid
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  year            Int
+  quarter         Int
+  pillar          PillarType
+  title           String
+  description     String?    @db.Text
+  specificOutcome String     @db.Text
+  targetValue     Float
+  currentValue    Float      @default(0)
+  unit            String
+  deadline        DateTime   @db.Date
+  status          GoalStatus @default(NOT_STARTED)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  milestones      Milestone[]
+  todos           DailyTodo[]
+
+  @@index([userId, year, quarter])
+}
+
+model Milestone {
+  id        String        @id @default(uuid()) @db.Uuid
+  goalId    String        @db.Uuid
+  goal      QuarterlyGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  title     String
+  dueDate   DateTime      @db.Date
+  isDone    Boolean       @default(false)
+  order     Int           @default(0)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([goalId, order])
+}
+
+model DailyTodo {
+  id               String         @id @default(uuid()) @db.Uuid
+  userId           String         @db.Uuid
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date             DateTime       @db.Date
+  title            String
+  isCompleted      Boolean        @default(false)
+  incompleteReason String?        @db.Text
+  postponedToDates Json?
+  sourceTodoId     String?        @db.Uuid
+  sourceTodo       DailyTodo?     @relation("TodoCarry", fields: [sourceTodoId], references: [id], onDelete: SetNull)
+  carriedTodos     DailyTodo[]    @relation("TodoCarry")
+  carriedFromDate  DateTime?      @db.Date
+  goalId           String?        @db.Uuid
+  goal             QuarterlyGoal? @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  pillar           PillarType?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([userId, date])
+}
+
+model DailyMood {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  level     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, date])
+}
+
+model MonthlyPlan {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  year          Int
+  month         Int
+  importantNote String   @default("") @db.Text
+  goals         Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, year, month])
+}
+
+model MonthlyReview {
+  id                  String   @id @default(uuid()) @db.Uuid
+  userId              String   @db.Uuid
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  year                Int
+  month               Int
+  whatILovedMost      String   @db.Text
+  whatToStop          String   @db.Text
+  whatToContinue      String   @db.Text
+  ratingCareer        Int
+  ratingPersonal      Int
+  ratingFinance       Int
+  ratingRelationships Int
+  ratingMental        Int
+  ratingPhysical      Int
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([userId, year, month])
+}
+
+model QuarterlyReview {
+  id                  String   @id @default(uuid()) @db.Uuid
+  userId              String   @db.Uuid
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  year                Int
+  quarter             Int
+  narrative           String   @db.Text
+  nextQuarterPlan     String   @db.Text
+  goalOutcomes        Json?
+  ratingCareer        Int
+  ratingPersonal      Int
+  ratingFinance       Int
+  ratingRelationships Int
+  ratingMental        Int
+  ratingPhysical      Int
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([userId, year, quarter])
+}
+
+model AiNudgeLog {
+  id            String       @id @default(uuid()) @db.Uuid
+  userId        String       @db.Uuid
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  triggerReason NudgeTrigger
+  nudgeText     String       @db.Text
+  contextUsed   String       @db.Text
+  isRead        Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model RateLimitBucket {
+  key     String   @id
+  count   Int      @default(0)
+  resetAt DateTime
+}

@@ -1,0 +1,93 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+import { useLocale } from "next-intl";
+import { isSupabaseConfigured } from "@/lib/env";
+import { REMINDER_COPY, REMINDER_HREF } from "@/lib/reminders/copy";
+import { dueCadences } from "@/lib/reminders/engine";
+import { DEFAULT_PREFS, type ReminderLogDto, type ReminderPrefDto } from "@/lib/reminders/schema";
+import { useRemindersStore } from "@/stores/reminders-store";
+
+async function loadPrefs(demo: boolean): Promise<ReminderPrefDto[]> {
+  if (demo) return useRemindersStore.getState().prefs;
+  const response = await fetch("/api/reminders/prefs");
+  const json = (await response.json()) as { ok: boolean; prefs?: ReminderPrefDto[] };
+  if (!json.ok || !json.prefs) return DEFAULT_PREFS;
+  return json.prefs;
+}
+
+function notifyBrowser(log: ReminderLogDto) {
+  if (typeof window === "undefined" || !("Notification" in window)) return;
+  if (Notification.permission !== "granted") return;
+  try {
+    new Notification(log.title, { body: log.body });
+  } catch {
+    /* ignore */
+  }
+}
+
+export function ReminderWatcher() {
+  const locale = useLocale() === "en" ? "en" : "th";
+  const running = useRef(false);
+
+  useEffect(() => {
+    const demo = !isSupabaseConfigured();
+
+    async function tick() {
+      if (running.current || document.visibilityState === "hidden") return;
+      running.current = true;
+      try {
+        const prefs = await loadPrefs(demo);
+        const due = dueCadences(prefs);
+        for (const pref of due) {
+          if (demo) {
+            const copy = REMINDER_COPY[locale][pref.cadence];
+            const log: ReminderLogDto = {
+              id: crypto.randomUUID(),
+              cadence: pref.cadence,
+              channel: pref.channel,
+              title: copy.title,
+              body: copy.body,
+              href: REMINDER_HREF[pref.cadence],
+              isRead: false,
+              sentAt: new Date().toISOString(),
+            };
+            useRemindersStore.getState().addLog(log);
+            if (pref.channel === "BROWSER") notifyBrowser(log);
+            continue;
+          }
+          const response = await fetch("/api/reminders", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ cadence: pref.cadence }),
+          });
+          const json = (await response.json()) as {
+            ok: boolean;
+            skipped?: boolean;
+            log?: ReminderLogDto;
+          };
+          if (json.ok && json.log && pref.channel === "BROWSER") {
+            notifyBrowser(json.log);
+          }
+        }
+      } catch {
+        /* ignore polling errors */
+      } finally {
+        running.current = false;
+      }
+    }
+
+    void tick();
+    const id = window.setInterval(() => void tick(), 30_000);
+    const onFocus = () => void tick();
+    document.addEventListener("visibilitychange", onFocus);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onFocus);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [locale]);
+
+  return null;
+}
