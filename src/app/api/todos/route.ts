@@ -56,20 +56,10 @@ export async function GET(request: Request) {
     .catch(() => []);
 
   const weekFrom = shiftYmd(today, -6);
-  const weekTodos =
-    from <= weekFrom && to >= today
-      ? todos.filter((todo) => {
-          const ymd = toDateOnly(todo.date);
-          return ymd >= weekFrom && ymd <= today;
-        })
-      : await prisma.dailyTodo
-          .findMany({
-            where: {
-              userId: user.id,
-              date: { gte: fromDateOnly(weekFrom), lte: fromDateOnly(today) },
-            },
-          })
-          .catch(() => []);
+  const weekTodos = todos.filter((todo) => {
+    const ymd = toDateOnly(todo.date);
+    return ymd >= weekFrom && ymd <= today;
+  });
 
   return NextResponse.json({
     ok: true,

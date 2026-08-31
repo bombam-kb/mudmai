@@ -64,6 +64,11 @@ export function MonthCalendar({
 
   const prev = month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
   const next = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
+  const todayYear = Number(today.slice(0, 4));
+  const todayMonth = Number(today.slice(5, 7));
+  const isCurrentMonth = year === todayYear && month === todayMonth;
+  const jumpTodayClass =
+    "rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white";
 
   return (
     <AppShell name={name} onSignOut={signOut}>
@@ -84,12 +89,16 @@ export function MonthCalendar({
           >
             {t("prev")}
           </Link>
-          <Link
-            href={`/calendar?year=${Number(today.slice(0, 4))}&month=${Number(today.slice(5, 7))}`}
-            className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white"
-          >
-            {t("jumpToday")}
-          </Link>
+          {isCurrentMonth ? (
+            <span className={jumpTodayClass}>{t("jumpToday")}</span>
+          ) : (
+            <Link
+              href={`/calendar?year=${todayYear}&month=${todayMonth}`}
+              className={jumpTodayClass}
+            >
+              {t("jumpToday")}
+            </Link>
+          )}
           <Link
             href={`/calendar?year=${next.year}&month=${next.month}`}
             className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-muted ring-1 ring-slate-200"

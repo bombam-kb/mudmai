@@ -30,6 +30,8 @@ export default async function TodosPage({ params, searchParams }: Props) {
         name={session.name}
         demoMode
         selectedDate={selectedDate}
+        loadedFrom={from}
+        loadedTo={to}
         initialTodos={[]}
         goals={[]}
       />
@@ -61,6 +63,8 @@ export default async function TodosPage({ params, searchParams }: Props) {
       name={session.name}
       demoMode={false}
       selectedDate={selectedDate}
+      loadedFrom={from}
+      loadedTo={to}
       initialTodos={todos.map(toTodoDto)}
       goals={goals.map(
         (goal): GoalOption => ({

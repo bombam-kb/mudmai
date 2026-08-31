@@ -24,6 +24,7 @@ export async function requireAppUser(
   options?: {
     allowIncompleteOnboarding?: boolean;
     allowMissingPdpa?: boolean;
+    withReflection?: boolean;
   },
 ) {
   const appLocale: Locale = locale === "en" ? "en" : "th";
@@ -42,7 +43,10 @@ export async function requireAppUser(
     };
   }
 
-  const { user, profile, reflection } = await getSessionProfile(appLocale);
+  const { user, profile, reflection, reflectionExists } = await getSessionProfile(
+    appLocale,
+    Boolean(options?.withReflection),
+  );
   if (!user) {
     redirect({ href: "/login", locale });
     throw new Error("unauthenticated");
@@ -52,7 +56,10 @@ export async function requireAppUser(
     redirect({ href: "/privacy/consent", locale });
   }
 
-  if (!options?.allowIncompleteOnboarding && needsOnboarding(profile, reflection)) {
+  if (
+    !options?.allowIncompleteOnboarding &&
+    needsOnboarding(profile, reflection ?? (reflectionExists ? { id: true } : null))
+  ) {
     redirect({ href: "/onboarding", locale });
   }
 

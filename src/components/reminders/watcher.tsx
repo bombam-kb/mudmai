@@ -8,12 +8,20 @@ import { dueCadences } from "@/lib/reminders/engine";
 import { DEFAULT_PREFS, type ReminderLogDto, type ReminderPrefDto } from "@/lib/reminders/schema";
 import { useRemindersStore } from "@/stores/reminders-store";
 
+const PREFS_TTL_MS = 30_000;
+const TICK_GAP_MS = 8_000;
+
+let prefsMemo: { at: number; prefs: ReminderPrefDto[] } | null = null;
+let lastTickAt = 0;
+
 async function loadPrefs(demo: boolean): Promise<ReminderPrefDto[]> {
   if (demo) return useRemindersStore.getState().prefs;
+  if (prefsMemo && Date.now() - prefsMemo.at < PREFS_TTL_MS) return prefsMemo.prefs;
   const response = await fetch("/api/reminders/prefs");
   const json = (await response.json()) as { ok: boolean; prefs?: ReminderPrefDto[] };
-  if (!json.ok || !json.prefs) return DEFAULT_PREFS;
-  return json.prefs;
+  const prefs = !json.ok || !json.prefs ? DEFAULT_PREFS : json.prefs;
+  prefsMemo = { at: Date.now(), prefs };
+  return prefs;
 }
 
 function notifyBrowser(log: ReminderLogDto) {
@@ -35,6 +43,8 @@ export function ReminderWatcher() {
 
     async function tick() {
       if (running.current || document.visibilityState === "hidden") return;
+      if (Date.now() - lastTickAt < TICK_GAP_MS) return;
+      lastTickAt = Date.now();
       running.current = true;
       try {
         const prefs = await loadPrefs(demo);

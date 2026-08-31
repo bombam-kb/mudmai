@@ -16,6 +16,7 @@ export default async function OnboardingPage({ params }: Props) {
 
   const session = await requireAppUser(locale, {
     allowIncompleteOnboarding: true,
+    withReflection: true,
   });
 
   return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { AppShell } from "@/components/app-shell";
 import { TodoList } from "@/components/todos/todo-list";
@@ -18,14 +18,32 @@ type Props = {
   name: string;
   demoMode: boolean;
   selectedDate: string;
+  loadedFrom: string;
+  loadedTo: string;
   initialTodos: TodoDto[];
   goals: GoalOption[];
 };
+
+function mergeTodos(current: TodoDto[], incoming: TodoDto[]) {
+  if (incoming.length === 0) return current;
+  const ids = new Set(current.map((item) => item.id));
+  const extra = incoming.filter((item) => !ids.has(item.id));
+  return extra.length === 0 ? current : [...current, ...extra];
+}
+
+function replaceDateQuery(date: string) {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  url.searchParams.set("date", date);
+  window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}`);
+}
 
 export function TodosBoard({
   name,
   demoMode,
   selectedDate,
+  loadedFrom,
+  loadedTo,
   initialTodos,
   goals,
 }: Props) {
@@ -33,13 +51,18 @@ export function TodosBoard({
   const router = useRouter();
   const storedTodos = useTodosStore((state) => state.todos);
   const storedGoals = useGoalsStore((state) => state.goals);
+  const [date, setDate] = useState(selectedDate);
+  const [range, setRange] = useState({ from: loadedFrom, to: loadedTo });
   const [liveTodos, setLiveTodos] = useState(initialTodos);
+  const fetchRef = useRef<AbortController | null>(null);
   const today = localYmd();
   const yesterday = shiftYmd(today, -1);
 
   useEffect(() => {
+    setDate(selectedDate);
+    setRange({ from: loadedFrom, to: loadedTo });
     setLiveTodos(initialTodos);
-  }, [initialTodos]);
+  }, [selectedDate, loadedFrom, loadedTo, initialTodos]);
 
   const goalOptions = demoMode
     ? storedGoals
@@ -55,11 +78,11 @@ export function TodosBoard({
   const source = demoMode ? storedTodos : liveTodos;
 
   const tab: Tab | "other" =
-    selectedDate === today
+    date === today
       ? "today"
-      : selectedDate === yesterday
+      : date === yesterday
         ? "yesterday"
-        : selectedDate > today
+        : date > today
           ? "upcoming"
           : "other";
 
@@ -82,8 +105,30 @@ export function TodosBoard({
     router.refresh();
   }
 
-  function go(date: string) {
-    router.push(`/todos?date=${date}`);
+  async function go(next: string) {
+    if (next === date) return;
+    setDate(next);
+    replaceDateQuery(next);
+    if (demoMode || (next >= range.from && next <= range.to)) return;
+
+    fetchRef.current?.abort();
+    const controller = new AbortController();
+    fetchRef.current = controller;
+    const from = next < range.from ? next : range.from;
+    const to = next > range.to ? next : range.to;
+    try {
+      const response = await fetch(`/api/todos?from=${from}&to=${to}`, {
+        signal: controller.signal,
+      });
+      const json = (await response.json().catch(() => null)) as
+        | { ok?: boolean; todos?: TodoDto[] }
+        | null;
+      if (!json?.ok || !json.todos) return;
+      setLiveTodos((current) => mergeTodos(current, json.todos ?? []));
+      setRange({ from, to });
+    } catch (error) {
+      if ((error as { name?: string }).name === "AbortError") return;
+    }
   }
 
   return (
@@ -117,11 +162,11 @@ export function TodosBoard({
             ["yesterday", yesterday],
             ["upcoming", shiftYmd(today, 1)],
           ] as const
-        ).map(([key, date]) => (
+        ).map(([key, nextDate]) => (
           <button
             key={key}
             type="button"
-            onClick={() => go(date)}
+            onClick={() => void go(nextDate)}
             className={`rounded-full px-3 py-1 text-sm font-semibold ${
               tab === key ? "bg-brand text-white" : "bg-white text-muted ring-1 ring-slate-200"
             }`}
@@ -133,9 +178,9 @@ export function TodosBoard({
           {t("pickDate")}
           <input
             type="date"
-            value={selectedDate}
+            value={date}
             onChange={(event) => {
-              if (event.target.value) go(event.target.value);
+              if (event.target.value) void go(event.target.value);
             }}
             className="rounded-full bg-white px-3 py-1 ring-1 ring-slate-200"
           />
@@ -147,7 +192,7 @@ export function TodosBoard({
           <section className="rounded-3xl bg-white p-6 shadow-card ring-1 ring-slate-100">
             <h2 className="mb-3 font-display text-2xl">{t("addUpcoming")}</h2>
             <TodoList
-              date={selectedDate >= today ? selectedDate : shiftYmd(today, 1)}
+              date={date >= today ? date : shiftYmd(today, 1)}
               demoMode={demoMode}
               goals={goalOptions}
               initialTodos={source}
@@ -158,15 +203,15 @@ export function TodosBoard({
             <p className="text-muted">{t("emptyUpcoming")}</p>
           ) : (
             upcomingDates
-              .filter((date) => date !== selectedDate)
-              .map((date) => (
+              .filter((upcomingDate) => upcomingDate !== date)
+              .map((upcomingDate) => (
                 <section
-                  key={date}
+                  key={upcomingDate}
                   className="rounded-3xl bg-white p-6 shadow-card ring-1 ring-slate-100"
                 >
-                  <h2 className="mb-3 font-display text-2xl">{date}</h2>
+                  <h2 className="mb-3 font-display text-2xl">{upcomingDate}</h2>
                   <TodoList
-                    date={date}
+                    date={upcomingDate}
                     demoMode={demoMode}
                     goals={goalOptions}
                     initialTodos={source}
@@ -183,13 +228,13 @@ export function TodosBoard({
               ? t("yesterday")
               : tab === "today"
                 ? t("today")
-                : selectedDate}
+                : date}
             {tab !== "other" ? (
-              <span className="ml-2 text-base font-normal text-muted">{selectedDate}</span>
+              <span className="ml-2 text-base font-normal text-muted">{date}</span>
             ) : null}
           </h2>
           <TodoList
-            date={selectedDate}
+            date={date}
             demoMode={demoMode}
             goals={goalOptions}
             initialTodos={source}

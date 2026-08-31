@@ -13,6 +13,8 @@ import { useOnboardingStore } from "@/stores/onboarding-store";
 import { useReviewsStore } from "@/stores/reviews-store";
 import { useTodosStore } from "@/stores/todos-store";
 
+let nudgeEvalScheduled = false;
+
 function sparkleToColor(trigger: NudgeTriggerId) {
   if (trigger === "LOW_MENTAL_SCORE") return PILLAR_MAP.MENTAL_HEALTH.color;
   if (trigger === "LOW_CAREER_SCORE") return PILLAR_MAP.CAREER.color;
@@ -41,16 +43,21 @@ export function NudgeCards({ demoMode, initialNudges = [], reflection }: Props) 
   }, [initialNudges]);
 
   useEffect(() => {
-    if (demoMode) return;
+    if (demoMode || nudgeEvalScheduled) return;
     let cancelled = false;
-    void fetch("/api/nudges", { method: "POST" })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((json: { nudges?: NudgeDto[] } | null) => {
-        if (!cancelled && json?.nudges) setLive(json.nudges);
-      })
-      .catch(() => null);
+    const timer = window.setTimeout(() => {
+      if (cancelled) return;
+      nudgeEvalScheduled = true;
+      void fetch("/api/nudges", { method: "POST" })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((json: { nudges?: NudgeDto[] } | null) => {
+          if (!cancelled && json?.nudges) setLive(json.nudges);
+        })
+        .catch(() => null);
+    }, 2500);
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
     };
   }, [demoMode]);
 

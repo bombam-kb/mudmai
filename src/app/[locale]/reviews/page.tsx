@@ -15,7 +15,7 @@ export default async function ReviewsPage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
   const { year } = calendarParts();
-  const session = await requireAppUser(locale);
+  const session = await requireAppUser(locale, { withReflection: true });
 
   if (session.demoMode) {
     return (

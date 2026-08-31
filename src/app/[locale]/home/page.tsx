@@ -2,8 +2,8 @@ import { setRequestLocale } from "next-intl/server";
 import { HomeDashboard } from "@/components/home-dashboard";
 import { requireAppUser } from "@/lib/auth/require-user";
 import { prisma } from "@/lib/prisma";
-import { toGoalDto } from "@/lib/goals/schema";
 import { toTodoDto, type GoalOption } from "@/lib/todos/schema";
+import { goalProgressPercent } from "@/lib/pillars";
 import { toLogDto } from "@/lib/reminders/schema";
 import { isMoodLevel, type MoodLevel } from "@/lib/mood/schema";
 import { findMonthPlan } from "@/lib/month-plan/db";
@@ -31,7 +31,7 @@ export default async function HomePage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const session = await requireAppUser(locale);
+  const session = await requireAppUser(locale, { withReflection: true });
   if (session.demoMode) {
     return (
       <HomeDashboard
@@ -53,7 +53,14 @@ export default async function HomePage({ params }: Props) {
       prisma.quarterlyGoal
         .findMany({
           where: { userId: user.id, year },
-          include: { milestones: true },
+          select: {
+            id: true,
+            title: true,
+            pillar: true,
+            quarter: true,
+            currentValue: true,
+            targetValue: true,
+          },
           orderBy: [{ quarter: "asc" }, { createdAt: "asc" }],
         })
         .catch(() => []),
@@ -69,9 +76,9 @@ export default async function HomePage({ params }: Props) {
         .catch(() => []),
       prisma.reminderLog
         .findMany({
-          where: { userId: user.id },
+          where: { userId: user.id, isRead: false },
           orderBy: { sentAt: "desc" },
-          take: 5,
+          take: 2,
         })
         .catch(() => []),
       prisma.monthlyReview
@@ -122,8 +129,8 @@ export default async function HomePage({ params }: Props) {
       name={name}
       currentQuarter={quarter}
       todos={todos.map(toTodoDto)}
-      latestReminders={reminderLogs.filter((log) => !log.isRead).slice(0, 2).map(toLogDto)}
-      unreadCount={reminderLogs.filter((log) => !log.isRead).length}
+      latestReminders={reminderLogs.map(toLogDto)}
+      unreadCount={reminderLogs.length}
       monthlyDue={!monthlyReview && isMonthlyReviewWindow()}
       quarterlyDue={!quarterlyReview && isQuarterlyReviewWindow()}
       mood={todayMood && isMoodLevel(todayMood.level) ? (todayMood.level as MoodLevel) : null}
@@ -137,18 +144,12 @@ export default async function HomePage({ params }: Props) {
           quarter: goal.quarter,
         }),
       )}
-      quarterGoals={quarterGoals.map((goal) => {
-        const dto = toGoalDto({
-          ...goal,
-          milestones: goal.milestones,
-        });
-        return {
-          id: dto.id,
-          title: dto.title,
-          pillar: dto.pillar,
-          progress: dto.progress,
-        };
-      })}
+      quarterGoals={quarterGoals.map((goal) => ({
+        id: goal.id,
+        title: goal.title,
+        pillar: goal.pillar as PillarId,
+        progress: goalProgressPercent(goal.currentValue, goal.targetValue),
+      }))}
       reflection={
         reflection
           ? {

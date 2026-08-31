@@ -55,7 +55,7 @@ export function MonthPlanCard({
   year,
   month,
   demoMode,
-  initialPlan = null,
+  initialPlan,
 }: Props) {
   const t = useTranslations("monthPlan");
   const tc = useTranslations("calendar");
@@ -101,7 +101,7 @@ export function MonthPlanCard({
   }, [year, month, demoMode, initialPlan]);
 
   useEffect(() => {
-    if (demoMode) return;
+    if (demoMode || initialPlan !== undefined) return;
     const controller = new AbortController();
     void (async () => {
       try {
@@ -120,7 +120,7 @@ export function MonthPlanCard({
       }
     })();
     return () => controller.abort();
-  }, [year, month, demoMode]);
+  }, [year, month, demoMode, initialPlan]);
 
   useEffect(() => {
     if (plan.goals.length > 1) return;

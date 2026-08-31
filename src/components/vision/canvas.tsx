@@ -136,14 +136,6 @@ export function VisionCanvas({ year, initialSnapshot, demoMode }: Props) {
     } catch {
       // empty board
     }
-    if (demoMode) return;
-    void fetch("/api/vision")
-      .then((response) => response.json())
-      .then((json: { quota?: { objects?: number; bytes?: number } }) => {
-        if (typeof json.quota?.objects === "number") setObjects(json.quota.objects);
-        if (typeof json.quota?.bytes === "number") setBytes(json.quota.bytes);
-      })
-      .catch(() => undefined);
   }, [demoMode, store]);
 
   const persist = useCallback(async () => {
