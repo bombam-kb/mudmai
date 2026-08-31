@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { markLineReachable } from "@/lib/line/account";
-import { linkPromptMessages, lineAppHref, replyLine } from "@/lib/line/messaging";
+import { oaKeyFromText, replyLine, welcomeMessages } from "@/lib/line/messaging";
+import { buildOaDigest, digestMessages } from "@/lib/line/oa-digest";
+import { attachUserMenu } from "@/lib/line/rich-menu";
 
 type LineEvent = {
   type?: string;
@@ -34,10 +36,15 @@ export async function handleLineEvents(events: LineEvent[]) {
 
     if (event.type === "follow") {
       await markLineReachable(lineUserId, true);
-      const linked = await prisma.lineAccount.findUnique({ where: { lineUserId } });
-      if (!linked && event.replyToken) {
-        await replyLine(event.replyToken, linkPromptMessages("th"));
+      const linked = await prisma.lineAccount.findUnique({
+        where: { lineUserId },
+        include: { user: { select: { preferredLocale: true } } },
+      });
+      const locale = linked?.user.preferredLocale === "en" ? "en" : "th";
+      if (event.replyToken) {
+        await replyLine(event.replyToken, welcomeMessages(locale, Boolean(linked)));
       }
+      void attachUserMenu(lineUserId, locale).catch(() => null);
       continue;
     }
 
@@ -64,36 +71,10 @@ async function replyForShortcut(
   });
   const locale = account?.user.preferredLocale === "en" ? "en" : "th";
   if (!account) {
-    await replyLine(replyToken, linkPromptMessages(locale));
+    await replyLine(replyToken, welcomeMessages(locale, false));
     return;
   }
-
-  const key = (data ?? "").toLowerCase();
-  const path =
-    key.includes("goal") || key.includes("เป้า")
-      ? "/goals"
-      : key.includes("review") || key.includes("รีวิว")
-        ? "/reviews"
-        : key.includes("today") || key.includes("todo") || key.includes("วันนี้")
-          ? "/todos"
-          : "/home";
-  const label = locale === "en" ? "Open" : "เปิด";
-  const title = locale === "en" ? "Mudmai" : "หมุดหมาย";
-  const text =
-    locale === "en"
-      ? "Open the app to continue. Private reminders stay in this chat when you opt in."
-      : "เปิดแอปเพื่อทำต่อ การเตือนส่วนตัวจะมาในแชทนี้ถ้าคุณเปิดไว้";
-
-  await replyLine(replyToken, [
-    {
-      type: "template",
-      altText: title,
-      template: {
-        type: "buttons",
-        title,
-        text,
-        actions: [{ type: "uri", label, uri: lineAppHref(locale, path) }],
-      },
-    },
-  ]);
+  const key = oaKeyFromText(data) ?? "home";
+  const text = await buildOaDigest(account.userId, locale, key);
+  await replyLine(replyToken, digestMessages(locale, text));
 }

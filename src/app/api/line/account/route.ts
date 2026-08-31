@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/auth/require-api-user";
 import { prisma } from "@/lib/prisma";
 import { isLineLoginConfigured, isLineMessagingConfigured } from "@/lib/env";
-import { getLineLinkStatus } from "@/lib/line/account";
+import { getLineLinkStatus, unlinkLineAccount } from "@/lib/line/account";
 import { isLinePlaceholderEmail } from "@/lib/line/oauth";
 import { rateLimitJson } from "@/lib/http/rate-limit";
 
@@ -79,6 +79,6 @@ export async function DELETE() {
     return NextResponse.json({ ok: false, error: "line_only" }, { status: 400 });
   }
 
-  await prisma.lineAccount.deleteMany({ where: { userId: auth.user.id } });
+  await unlinkLineAccount(auth.user.id);
   return NextResponse.json({ ok: true, linked: false });
 }

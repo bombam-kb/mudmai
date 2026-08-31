@@ -20,6 +20,8 @@ import {
 } from "@/lib/year";
 import type { PillarId } from "@/lib/pillars";
 import { toNudgeDto } from "@/lib/nudge/schema";
+import { getLineLinkStatus } from "@/lib/line/account";
+import { isLineLoginConfigured, isLineMessagingConfigured } from "@/lib/env";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -48,7 +50,7 @@ export default async function HomePage({ params }: Props) {
   const weekFrom = shiftYmd(today, -6);
   const parts = calendarParts();
 
-  const [yearGoals, todos, reminderLogs, monthlyReview, quarterlyReview, todayMood, monthPlan, nudges] =
+  const [yearGoals, todos, reminderLogs, monthlyReview, quarterlyReview, todayMood, monthPlan, nudges, lineStatus] =
     await Promise.all([
       prisma.quarterlyGoal
         .findMany({
@@ -120,6 +122,7 @@ export default async function HomePage({ params }: Props) {
           take: 5,
         })
         .catch(() => []),
+      getLineLinkStatus(user.id).catch(() => null),
     ]);
 
   const quarterGoals = yearGoals.filter((goal) => goal.quarter === quarter);
@@ -136,6 +139,15 @@ export default async function HomePage({ params }: Props) {
       mood={todayMood && isMoodLevel(todayMood.level) ? (todayMood.level as MoodLevel) : null}
       monthPlan={monthPlan ? toMonthPlanDto(monthPlan) : null}
       nudges={nudges.map(toNudgeDto)}
+      line={{
+        linked: lineStatus?.linked ?? false,
+        reachable: lineStatus?.reachable ?? false,
+        loginConfigured: isLineLoginConfigured(),
+        messagingConfigured: isLineMessagingConfigured(),
+        addFriendUrl: process.env.NEXT_PUBLIC_LINE_OA_BASIC_ID
+          ? `https://line.me/R/ti/p/${process.env.NEXT_PUBLIC_LINE_OA_BASIC_ID}`
+          : null,
+      }}
       goalOptions={yearGoals.map(
         (goal): GoalOption => ({
           id: goal.id,

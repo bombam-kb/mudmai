@@ -94,6 +94,7 @@ export function LineConnectCard({
     <section className="mt-6 rounded-3xl bg-white p-6 shadow-card ring-1 ring-slate-100">
       <h2 className="font-display text-2xl">{t("lineTitle")}</h2>
       <p className="mt-1 text-sm text-muted">{t("lineBody")}</p>
+      <p className="mt-2 text-sm text-muted">{t("lineMenuHint")}</p>
 
       {status.linked ? (
         <div className="mt-4 space-y-3">

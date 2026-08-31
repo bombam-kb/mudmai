@@ -1,9 +1,14 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { isLineMessagingConfigured } from "@/lib/env";
 import { verifyLineWebhookSignature } from "@/lib/line/signature";
 import { handleLineEvents } from "@/lib/line/webhook";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function GET() {
+  return NextResponse.json({ ok: true });
+}
 
 export async function POST(request: Request) {
   if (!isLineMessagingConfigured()) {
@@ -27,6 +32,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  await handleLineEvents(events as Parameters<typeof handleLineEvents>[0]).catch(() => null);
+  after(() => {
+    void handleLineEvents(events as Parameters<typeof handleLineEvents>[0]).catch((error) => {
+      console.warn("[line-webhook]", error instanceof Error ? error.message : "failed");
+    });
+  });
   return NextResponse.json({ ok: true });
 }

@@ -26,6 +26,7 @@ import type { ReminderLogDto } from "@/lib/reminders/schema";
 import type { MoodLevel } from "@/lib/mood/schema";
 import type { MonthPlanDto } from "@/lib/month-plan/schema";
 import type { NudgeDto } from "@/lib/nudge/schema";
+import { LineNotifyBanner, type LineNotifyState } from "@/components/line/notify-banner";
 
 type ReflectionCard = {
   healingThings: string;
@@ -55,6 +56,7 @@ type Props = {
   mood?: MoodLevel | null;
   monthPlan?: MonthPlanDto | null;
   nudges?: NudgeDto[];
+  line?: LineNotifyState | null;
 };
 
 export function HomeDashboard({
@@ -72,6 +74,7 @@ export function HomeDashboard({
   mood = null,
   monthPlan = null,
   nudges = [],
+  line = null,
 }: Props) {
   const t = useTranslations("home");
   const tp = useTranslations("pillars");
@@ -125,6 +128,7 @@ export function HomeDashboard({
       </p>
 
       <div className="space-y-4">
+        <LineNotifyBanner demoMode={demoMode} line={line} />
         <TodayTodos
           demoMode={demoMode}
           initialTodos={todos}

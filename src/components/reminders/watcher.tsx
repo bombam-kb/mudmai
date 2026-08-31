@@ -24,11 +24,20 @@ async function loadPrefs(demo: boolean): Promise<ReminderPrefDto[]> {
   return prefs;
 }
 
-function notifyBrowser(log: ReminderLogDto) {
+function notifyBrowser(log: ReminderLogDto, locale: "th" | "en") {
   if (typeof window === "undefined" || !("Notification" in window)) return;
   if (Notification.permission !== "granted") return;
   try {
-    new Notification(log.title, { body: log.body });
+    const note = new Notification(log.title, {
+      body: log.body,
+      tag: `jr-${log.cadence}`,
+    });
+    note.onclick = () => {
+      window.focus();
+      const path = log.href.startsWith("/") ? log.href : `/${log.href}`;
+      window.location.assign(`/${locale}${path}`);
+      note.close();
+    };
   } catch {
     /* ignore */
   }
@@ -63,7 +72,7 @@ export function ReminderWatcher() {
               sentAt: new Date().toISOString(),
             };
             useRemindersStore.getState().addLog(log);
-            if (pref.channel === "BROWSER") notifyBrowser(log);
+            if (pref.channel === "BROWSER") notifyBrowser(log, locale);
             continue;
           }
           const response = await fetch("/api/reminders", {
@@ -77,7 +86,7 @@ export function ReminderWatcher() {
             log?: ReminderLogDto;
           };
           if (json.ok && json.log && pref.channel === "BROWSER") {
-            notifyBrowser(json.log);
+            notifyBrowser(json.log, locale);
           }
         }
       } catch {

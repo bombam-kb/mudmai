@@ -3,6 +3,7 @@ import { PDPA_VERSION } from "@/lib/pdpa";
 import { applyReferral } from "@/lib/referrals/service";
 import { DEFAULT_PREFS } from "@/lib/reminders/schema";
 import { isLinePlaceholderEmail } from "@/lib/line/oauth";
+import { attachUserMenu } from "@/lib/line/rich-menu";
 import type { Locale } from "@prisma/client";
 
 export type LineLinkStatus = {
@@ -37,13 +38,18 @@ export async function markLineReachable(lineUserId: string, reachable: boolean) 
   });
 }
 
+export async function unlinkLineAccount(userId: string) {
+  const deleted = await prisma.lineAccount.deleteMany({ where: { userId } });
+  return deleted.count;
+}
+
 export async function upsertLineAccount(input: {
   userId: string;
   lineUserId: string;
   reachable: boolean;
 }) {
   const now = new Date();
-  return prisma.lineAccount.upsert({
+  const row = await prisma.lineAccount.upsert({
     where: { userId: input.userId },
     create: {
       userId: input.userId,
@@ -60,6 +66,8 @@ export async function upsertLineAccount(input: {
       unfollowedAt: input.reachable ? null : undefined,
     },
   });
+  void attachUserMenu(input.lineUserId).catch(() => null);
+  return row;
 }
 
 export async function ensureLineUserProfile(input: {
