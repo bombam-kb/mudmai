@@ -5,6 +5,7 @@ type Bucket = { count: number; resetAt: number };
 
 const memory = new Map<string, Bucket>();
 export const RATE_LIMIT_HOUR = 60 * 60 * 1000;
+let skipDurable = false;
 
 function consumeMemory(key: string, limit: number, windowMs: number) {
   const now = Date.now();
@@ -25,7 +26,7 @@ function consumeMemory(key: string, limit: number, windowMs: number) {
 }
 
 export async function consumeRateLimit(key: string, limit: number, windowMs: number) {
-  if (!process.env.DATABASE_URL) {
+  if (!process.env.DATABASE_URL || skipDurable) {
     return consumeMemory(key, limit, windowMs);
   }
 
@@ -56,6 +57,7 @@ export async function consumeRateLimit(key: string, limit: number, windowMs: num
     }
     return { ok: true as const, remaining: Math.max(0, limit - row.count) };
   } catch {
+    skipDurable = true;
     return consumeMemory(key, limit, windowMs);
   }
 }

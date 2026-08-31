@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { isSupabaseConfigured } from "@/lib/env";
 import { createClient } from "@/lib/supabase/client";
-import { LanguageToggle } from "./language-toggle";
 import { AppearanceToggles } from "./appearance-toggles";
 import { BrandLockup } from "@/components/icons";
 import { PDPA_VERSION } from "@/lib/pdpa";
@@ -124,7 +123,6 @@ export function AuthForm({
         </Link>
         <div className="flex flex-wrap items-center justify-end gap-2">
           <AppearanceToggles />
-          <LanguageToggle />
         </div>
       </div>
       <div className="rounded-3xl bg-white p-6 shadow-card ring-1 ring-slate-100">

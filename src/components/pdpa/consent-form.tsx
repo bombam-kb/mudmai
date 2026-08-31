@@ -3,9 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
-import { LanguageToggle } from "@/components/language-toggle";
 import { AppearanceToggles } from "@/components/appearance-toggles";
-import { SignOutButton } from "@/components/sign-out-button";
 import { PdpaNotice } from "@/components/pdpa/notice";
 import { isSupabaseConfigured } from "@/lib/env";
 import { PDPA_STORAGE_KEY, PDPA_VERSION } from "@/lib/pdpa";
@@ -59,9 +57,7 @@ export function PdpaConsentForm() {
           <BrandLockup />
         </Link>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <AppearanceToggles />
-          <LanguageToggle />
-          <SignOutButton />
+          <AppearanceToggles showSignOut />
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-4 pb-16">

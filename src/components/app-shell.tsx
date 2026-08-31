@@ -2,9 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
-import { LanguageToggle } from "./language-toggle";
 import { AppearanceToggles } from "./appearance-toggles";
-import { SignOutButton } from "./sign-out-button";
 import { ReminderWatcher } from "@/components/reminders/watcher";
 import { PdpaBanner } from "@/components/pdpa/banner";
 import { ClientStoreBinder } from "@/components/client-store-binder";
@@ -25,9 +23,6 @@ type Props = {
   onSignOut?: () => void;
   variant?: "default" | "canvas";
 };
-
-const signOutClass =
-  "jr-sign-out rounded-full bg-ink px-2.5 py-1.5 text-xs font-semibold text-white disabled:opacity-60 sm:px-3 sm:text-sm";
 
 function tabActive(pathname: string, href: string) {
   if (href === "/home") return pathname === "/home" || pathname === "/";
@@ -60,15 +55,7 @@ export function AppShell({ name, children, onSignOut, variant = "default" }: Pro
             ))}
           </nav>
           <div className="flex shrink-0 items-center justify-end gap-2">
-            <AppearanceToggles />
-            <LanguageToggle />
-            {onSignOut ? (
-              <button type="button" onClick={onSignOut} className={signOutClass}>
-                {t("home.signOut")}
-              </button>
-            ) : (
-              <SignOutButton className={signOutClass} />
-            )}
+            <AppearanceToggles showSignOut onSignOut={onSignOut} />
           </div>
         </div>
       </header>

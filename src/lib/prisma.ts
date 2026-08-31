@@ -21,9 +21,7 @@ function resolvePrisma() {
   if (existing && hasCurrentModels(existing)) return existing;
   if (existing) void existing.$disconnect();
   const client = createPrisma();
-  if (process.env.NODE_ENV !== "production") {
-    globalForPrisma.prisma = client;
-  }
+  globalForPrisma.prisma = client;
   return client;
 }
 

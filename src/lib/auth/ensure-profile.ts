@@ -11,6 +11,7 @@ export async function ensureProfile(
 
   const existing = await prisma.user.findUnique({ where: { id: user.id } });
   if (existing) {
+    if (existing.email === user.email) return existing;
     return prisma.user.update({
       where: { id: user.id },
       data: { email: user.email },

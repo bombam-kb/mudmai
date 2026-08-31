@@ -3,36 +3,82 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { useAppearanceStore, type ThemeMode } from "@/stores/appearance-store";
+import { LanguageToggle } from "@/components/language-toggle";
+import { SignOutButton } from "@/components/sign-out-button";
 
 type Size = "compact" | "panel";
 
-export function AppearanceToggles({ size = "compact" }: { size?: Size }) {
+export function AppearanceToggles({
+  size = "compact",
+  showSignOut = false,
+  onSignOut,
+}: {
+  size?: Size;
+  showSignOut?: boolean;
+  onSignOut?: () => void;
+}) {
   const t = useTranslations("settings");
   const theme = useAppearanceStore((state) => state.theme);
   const setTheme = useAppearanceStore((state) => state.setTheme);
 
   const fields = (
-    <fieldset>
-      <legend className="mb-1.5 text-xs font-semibold text-muted">{t("theme")}</legend>
-      <Segmented
-        ariaLabel={t("theme")}
-        value={theme}
-        onChange={setTheme}
-        options={[
-          { value: "light", label: t("themeLight"), icon: <SunIcon /> },
-          { value: "dark", label: t("themeDark"), icon: <MoonIcon /> },
-          { value: "system", label: t("themeSystem"), icon: <SystemIcon /> },
-        ]}
-      />
-    </fieldset>
+    <div className="grid gap-3">
+      <fieldset>
+        <legend className="mb-1.5 text-xs font-semibold text-muted">{t("language")}</legend>
+        <LanguageToggle className="inline-flex items-center gap-1 rounded-full bg-slate-50 p-1 ring-1 ring-slate-200" />
+      </fieldset>
+      <fieldset>
+        <legend className="mb-1.5 text-xs font-semibold text-muted">{t("theme")}</legend>
+        <Segmented
+          ariaLabel={t("theme")}
+          value={theme}
+          onChange={setTheme}
+          options={[
+            { value: "light", label: t("themeLight"), icon: <SunIcon /> },
+            { value: "dark", label: t("themeDark"), icon: <MoonIcon /> },
+            { value: "system", label: t("themeSystem"), icon: <SystemIcon /> },
+          ]}
+        />
+      </fieldset>
+    </div>
   );
 
-  if (size === "panel") return fields;
-  return <AppearanceMenu>{fields}</AppearanceMenu>;
+  if (size === "panel") {
+    return (
+      <fieldset>
+        <legend className="mb-1.5 text-xs font-semibold text-muted">{t("theme")}</legend>
+        <Segmented
+          ariaLabel={t("theme")}
+          value={theme}
+          onChange={setTheme}
+          options={[
+            { value: "light", label: t("themeLight"), icon: <SunIcon /> },
+            { value: "dark", label: t("themeDark"), icon: <MoonIcon /> },
+            { value: "system", label: t("themeSystem"), icon: <SystemIcon /> },
+          ]}
+        />
+      </fieldset>
+    );
+  }
+
+  return (
+    <AppearanceMenu showSignOut={showSignOut} onSignOut={onSignOut}>
+      {fields}
+    </AppearanceMenu>
+  );
 }
 
-function AppearanceMenu({ children }: { children: ReactNode }) {
+function AppearanceMenu({
+  children,
+  showSignOut,
+  onSignOut,
+}: {
+  children: ReactNode;
+  showSignOut?: boolean;
+  onSignOut?: () => void;
+}) {
   const t = useTranslations("settings");
+  const th = useTranslations("home");
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
@@ -74,9 +120,24 @@ function AppearanceMenu({ children }: { children: ReactNode }) {
           id={menuId}
           role="dialog"
           aria-label={t("appearanceMenu")}
-          className="absolute right-0 top-full z-40 mt-2 min-w-[11.5rem] rounded-2xl bg-white p-3 shadow-card ring-1 ring-slate-100"
+          className="absolute right-0 top-full z-40 mt-2 min-w-[13.5rem] rounded-2xl bg-white p-3 shadow-card ring-1 ring-slate-100"
         >
           {children}
+          {showSignOut ? (
+            <div className="mt-3 border-t border-slate-100 pt-3">
+              {onSignOut ? (
+                <button
+                  type="button"
+                  onClick={onSignOut}
+                  className="jr-sign-out w-full rounded-full bg-ink px-3 py-2 text-sm font-semibold text-white"
+                >
+                  {th("signOut")}
+                </button>
+              ) : (
+                <SignOutButton className="jr-sign-out w-full rounded-full bg-ink px-3 py-2 text-sm font-semibold text-white disabled:opacity-60" />
+              )}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

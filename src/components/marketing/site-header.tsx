@@ -2,9 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { LanguageToggle } from "@/components/language-toggle";
 import { AppearanceToggles } from "@/components/appearance-toggles";
-import { SignOutButton } from "@/components/sign-out-button";
 import { BrandLockup } from "@/components/icons";
 
 type Props = {
@@ -34,18 +32,14 @@ export function MarketingHeader({ signedIn = false }: Props) {
         </Link>
       </nav>
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <AppearanceToggles />
-        <LanguageToggle />
+        <AppearanceToggles showSignOut={signedIn} />
         {signedIn ? (
-          <>
-            <Link
-              href="/home"
-              className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-card"
-            >
-              {t("app")}
-            </Link>
-            <SignOutButton />
-          </>
+          <Link
+            href="/home"
+            className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-card"
+          >
+            {t("app")}
+          </Link>
         ) : (
           <>
             <Link

@@ -57,11 +57,9 @@ export function TodoList({
   const [draftPillar, setDraftPillar] = useState<PillarId>("PERSONAL");
   const [error, setError] = useState(false);
   const [quotaError, setQuotaError] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [pendingIds, setPendingIds] = useState<string[]>([]);
   const [celebrate, setCelebrate] = useState(false);
   const [celebrateKey, setCelebrateKey] = useState(0);
-  const pendingRef = useRef(new Set<string>());
+  const patchGen = useRef(new Map<string, number>());
 
   useEffect(() => {
     setTodos(initialTodos);
@@ -102,12 +100,11 @@ export function TodoList({
 
   async function createTodo() {
     const trimmed = title.trim();
-    if (!trimmed || saving) return;
+    if (!trimmed) return;
     if (todoQuotaFull) {
       setQuotaError(true);
       return;
     }
-    setSaving(true);
     setError(false);
     setQuotaError(false);
     const input: TodoInput = {
@@ -121,44 +118,47 @@ export function TodoList({
       sourceTodoId: null,
       carriedFromDate: null,
     };
+    const tempId = crypto.randomUUID();
+    const optimistic = inputToTodoDto(tempId, input, goals);
+    setTitle("");
+    setGoalId("");
+    setDraftPillar("PERSONAL");
+    if (demoMode) {
+      useTodosStore.getState().upsert(optimistic);
+      return;
+    }
+    applyTodos((current) => [...current, optimistic]);
     try {
-      if (demoMode) {
-        const todo = inputToTodoDto(crypto.randomUUID(), input, goals);
-        useTodosStore.getState().upsert(todo);
-      } else {
-        const response = await fetch("/api/todos", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(input),
-        });
-        const json = (await response.json()) as {
-          ok: boolean;
-          todo?: TodoDto;
-          error?: string;
-        };
-        if (json.error === "todo_quota") {
-          setQuotaError(true);
-          return;
-        }
-        if (!json.ok || !json.todo) throw new Error("create");
-        applyTodos((current) => [...current, json.todo!]);
+      const response = await fetch("/api/todos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      const json = (await response.json()) as {
+        ok: boolean;
+        todo?: TodoDto;
+        error?: string;
+      };
+      if (json.error === "todo_quota") {
+        applyTodos((current) => current.filter((item) => item.id !== tempId));
+        setQuotaError(true);
+        setTitle(trimmed);
+        return;
       }
-      setTitle("");
-      setGoalId("");
-      setDraftPillar("PERSONAL");
+      if (!json.ok || !json.todo) throw new Error("create");
+      applyTodos((current) =>
+        current.map((item) => (item.id === tempId ? json.todo! : item)),
+      );
     } catch {
+      applyTodos((current) => current.filter((item) => item.id !== tempId));
+      setTitle(trimmed);
       setError(true);
-    } finally {
-      setSaving(false);
     }
   }
 
   async function patchTodo(todo: TodoDto, partial: Partial<TodoInput>) {
-    if (pendingRef.current.has(todo.id)) return;
     const nextGoalId = "goalId" in partial ? partial.goalId ?? null : todo.goalId;
     const completed = partial.isCompleted ?? todo.isCompleted;
-    const togglingComplete =
-      "isCompleted" in partial && partial.isCompleted !== todo.isCompleted;
     const next: TodoDto = inputToTodoDto(
       todo.id,
       {
@@ -178,18 +178,16 @@ export function TodoList({
       },
       goals,
     );
+    maybeCelebrate(todo.id, completed && !todo.isCompleted);
     if (demoMode) {
-      maybeCelebrate(todo.id, completed && !todo.isCompleted);
       useTodosStore.getState().replace(next);
       return;
     }
-    pendingRef.current.add(todo.id);
-    setPendingIds([...pendingRef.current]);
-    if (!togglingComplete) {
-      applyTodos((current) =>
-        current.map((item) => (item.id === todo.id ? next : item)),
-      );
-    }
+    const gen = (patchGen.current.get(todo.id) ?? 0) + 1;
+    patchGen.current.set(todo.id, gen);
+    applyTodos((current) =>
+      current.map((item) => (item.id === todo.id ? next : item)),
+    );
     setError(false);
     try {
       const response = await fetch(`/api/todos/${todo.id}`, {
@@ -198,21 +196,19 @@ export function TodoList({
         body: JSON.stringify(partial),
       });
       const json = (await response.json()) as { ok: boolean; todo?: TodoDto };
-      if (!json.ok || !json.todo) throw new Error("patch");
-      maybeCelebrate(todo.id, Boolean(json.todo.isCompleted) && !todo.isCompleted);
-      applyTodos((current) =>
-        current.map((item) => (item.id === todo.id ? json.todo! : item)),
-      );
-    } catch {
-      if (!togglingComplete) {
+      if (patchGen.current.get(todo.id) !== gen) return;
+      if (!json.ok) throw new Error("patch");
+      if (json.todo) {
         applyTodos((current) =>
-          current.map((item) => (item.id === todo.id ? todo : item)),
+          current.map((item) => (item.id === todo.id ? json.todo! : item)),
         );
       }
+    } catch {
+      if (patchGen.current.get(todo.id) !== gen) return;
+      applyTodos((current) =>
+        current.map((item) => (item.id === todo.id ? todo : item)),
+      );
       setError(true);
-    } finally {
-      pendingRef.current.delete(todo.id);
-      setPendingIds([...pendingRef.current]);
     }
   }
 
@@ -279,17 +275,19 @@ export function TodoList({
     ]);
   }
 
-  async function removeTodo(id: string) {
+  async function removeTodo(todo: TodoDto) {
     if (demoMode) {
-      useTodosStore.getState().remove(id);
+      useTodosStore.getState().remove(todo.id);
       return;
     }
-    const response = await fetch(`/api/todos/${id}`, { method: "DELETE" });
+    applyTodos((current) => current.filter((item) => item.id !== todo.id));
+    const response = await fetch(`/api/todos/${todo.id}`, { method: "DELETE" });
     if (!response.ok) {
+      applyTodos((current) =>
+        current.some((item) => item.id === todo.id) ? current : [...current, todo],
+      );
       setError(true);
-      return;
     }
-    applyTodos((current) => current.filter((item) => item.id !== id));
   }
 
   return (
@@ -333,7 +331,6 @@ export function TodoList({
         />
         <PillarPicker
           value={draftPillar}
-          disabled={saving}
           allowEmpty={false}
           size={featured ? "featured" : "field"}
           tone="plain"
@@ -363,12 +360,12 @@ export function TodoList({
         </select>
         <button
           type="submit"
-          disabled={saving || !title.trim() || todoQuotaFull}
+          disabled={!title.trim() || todoQuotaFull}
           className={`jr-composer-submit rounded-full bg-brand text-sm font-semibold text-white disabled:opacity-50 ${
             featured ? "px-5 py-3.5" : "px-4 py-2.5"
           }`}
         >
-          {saving ? t("saving") : t("add")}
+          {t("add")}
         </button>
       </form>
 
@@ -392,7 +389,6 @@ export function TodoList({
                   goals={goals}
                   compact={compact}
                   hint={index === 0}
-                  pending={pendingIds.includes(todo.id)}
                   onToggle={() =>
                     void patchTodo(todo, { isCompleted: !todo.isCompleted })
                   }
@@ -411,7 +407,7 @@ export function TodoList({
                   }
                   onTitle={(title) => void patchTodo(todo, { title })}
                   onPostpone={(reason, dates) => void postponeTodo(todo, reason, dates)}
-                  onDelete={() => void removeTodo(todo.id)}
+                  onDelete={() => void removeTodo(todo)}
                 />
               ))}
             </ul>
@@ -429,7 +425,6 @@ export function TodoList({
                     todo={todo}
                     goals={goals}
                     compact={compact}
-                    pending={pendingIds.includes(todo.id)}
                     onToggle={() =>
                       void patchTodo(todo, { isCompleted: !todo.isCompleted })
                     }
@@ -448,7 +443,7 @@ export function TodoList({
                     }
                     onTitle={(title) => void patchTodo(todo, { title })}
                     onPostpone={(reason, dates) => void postponeTodo(todo, reason, dates)}
-                    onDelete={() => void removeTodo(todo.id)}
+                    onDelete={() => void removeTodo(todo)}
                   />
                 ))}
               </ul>

@@ -8,7 +8,7 @@ const LABELS = {
   en: "EN",
 } as const;
 
-export function LanguageToggle() {
+export function LanguageToggle({ className }: { className?: string }) {
   const t = useTranslations("welcome");
   const locale = useLocale();
   const router = useRouter();
@@ -20,7 +20,10 @@ export function LanguageToggle() {
 
   return (
     <div
-      className="inline-flex items-center gap-1 rounded-full bg-white p-1 shadow-sm ring-1 ring-slate-200"
+      className={
+        className ??
+        "inline-flex items-center gap-1 rounded-full bg-white p-1 shadow-sm ring-1 ring-slate-200"
+      }
       aria-label={t("language")}
     >
       {(["th", "en"] as const).map((code) => (

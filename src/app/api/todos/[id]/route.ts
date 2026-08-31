@@ -42,20 +42,32 @@ export async function PATCH(request: Request, { params }: Params) {
   const auth = await requireApiUser();
   if (!auth.ok) return auth.response;
   const { user } = auth;
-  const limited = await rateLimitJson(`todos-write:${user.id}`, 120);
-  if (limited) return limited;
   if (!process.env.DATABASE_URL) {
     return NextResponse.json({ ok: false, reason: "database" }, { status: 503 });
   }
 
   const { id } = await params;
-  const existing = await ownedTodo(user.id, id);
-  if (!existing) return NextResponse.json({ ok: false }, { status: 404 });
-
   const parsed = parseTodoPatch(await request.json().catch(() => null));
   if (!parsed.ok) {
     return NextResponse.json({ ok: false, error: parsed.error }, { status: 400 });
   }
+
+  const needsLookup = "date" in parsed.data || "goalId" in parsed.data;
+
+  if (!needsLookup) {
+    const updated = await prisma.dailyTodo.updateMany({
+      where: { id, userId: user.id },
+      data: todoWriteData(parsed.data),
+    });
+    if (updated.count === 0) return NextResponse.json({ ok: false }, { status: 404 });
+    return NextResponse.json({ ok: true });
+  }
+
+  const limited = await rateLimitJson(`todos-write:${user.id}`, 120);
+  if (limited) return limited;
+
+  const existing = await ownedTodo(user.id, id);
+  if (!existing) return NextResponse.json({ ok: false }, { status: 404 });
 
   const nextDate = parsed.data.date ?? toDateOnly(existing.date);
   const renew = forbidIfRenewal(auth.profile?.createdAt, yearFromYmd(nextDate));
@@ -94,13 +106,12 @@ export async function PATCH(request: Request, { params }: Params) {
     pillar = parsed.data.pillar ?? null;
   }
 
-  const todo = await prisma.dailyTodo.update({
-    where: { id },
+  const updated = await prisma.dailyTodo.updateMany({
+    where: { id, userId: user.id },
     data: todoWriteData({ ...parsed.data, pillar, goalId: nextGoalId }),
-    include: includeGoal,
   });
-
-  return NextResponse.json({ ok: true, todo: toTodoDto(todo) });
+  if (updated.count === 0) return NextResponse.json({ ok: false }, { status: 404 });
+  return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(_request: Request, { params }: Params) {
@@ -111,9 +122,9 @@ export async function DELETE(_request: Request, { params }: Params) {
   if (limited) return limited;
 
   const { id } = await params;
-  const existing = await ownedTodo(user.id, id);
-  if (!existing) return NextResponse.json({ ok: false }, { status: 404 });
-
-  await prisma.dailyTodo.delete({ where: { id } });
+  const deleted = await prisma.dailyTodo.deleteMany({
+    where: { id, userId: user.id },
+  });
+  if (deleted.count === 0) return NextResponse.json({ ok: false }, { status: 404 });
   return NextResponse.json({ ok: true });
 }

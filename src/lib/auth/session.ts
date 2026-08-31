@@ -22,13 +22,8 @@ export async function getSessionProfile(locale: "th" | "en" = "th") {
     return { user: null, profile: null, reflection: null };
   }
 
-  await ensureProfile(user, locale).catch((error) => {
-    console.error("ensureProfile", error);
-    return null;
-  });
-
   const year = activeCalendarYear();
-  const profile = await prisma.user
+  let profile = await prisma.user
     .findUnique({
       where: { id: user.id },
       include: {
@@ -42,6 +37,24 @@ export async function getSessionProfile(locale: "th" | "en" = "th") {
       console.error("getSessionProfile", error);
       return null;
     });
+
+  if (!profile) {
+    await ensureProfile(user, locale).catch((error) => {
+      console.error("ensureProfile", error);
+      return null;
+    });
+    profile = await prisma.user
+      .findUnique({
+        where: { id: user.id },
+        include: {
+          reflections: {
+            where: { year },
+            take: 1,
+          },
+        },
+      })
+      .catch(() => null);
+  }
 
   return {
     user,

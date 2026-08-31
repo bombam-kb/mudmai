@@ -751,7 +751,7 @@
     "language": "Language",
     "languageBody": "Switch ไทย / EN instantly across the app.",
     "appearance": "Display",
-    "appearanceMenu": "Theme",
+    "appearanceMenu": "Menu",
     "appearanceBody": "Layout follows the viewport: narrow screens use the mobile UI, wide screens use desktop. Pick light, dark, or system theme.",
     "layout": "Screen layout",
     "layoutMobile": "Mobile",
