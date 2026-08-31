@@ -173,6 +173,10 @@ html[data-layout="mobile"] .jr-top-nav {
   display: none;
 }
 
+html[data-layout="mobile"] .jr-sign-out {
+  display: inline-flex;
+}
+
 html[data-layout="desktop"] .jr-top-nav {
   display: flex;
 }

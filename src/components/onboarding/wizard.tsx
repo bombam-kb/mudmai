@@ -6,6 +6,7 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { AiLabel, AiSparkle, BrandLockup, PillarIcon } from "@/components/icons";
 import { LanguageToggle } from "@/components/language-toggle";
 import { AppearanceToggles } from "@/components/appearance-toggles";
+import { SignOutButton } from "@/components/sign-out-button";
 import { OnboardingProgress } from "@/components/onboarding/progress";
 import { RatingsStep } from "@/components/onboarding/ratings-step";
 import { PromptGuide } from "@/components/onboarding/prompt-guide";
@@ -144,6 +145,7 @@ export function OnboardingWizard({
         <div className="flex flex-wrap items-center justify-end gap-2">
           <AppearanceToggles />
           <LanguageToggle />
+          <SignOutButton />
         </div>
       </header>
       <main className={`mx-auto px-4 pb-16 ${textStep ? "max-w-6xl" : "max-w-3xl"}`}>

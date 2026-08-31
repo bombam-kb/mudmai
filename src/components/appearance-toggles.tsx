@@ -2,49 +2,29 @@
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import {
-  useAppearanceStore,
-  type LayoutMode,
-  type ThemeMode,
-} from "@/stores/appearance-store";
+import { useAppearanceStore, type ThemeMode } from "@/stores/appearance-store";
 
 type Size = "compact" | "panel";
 
 export function AppearanceToggles({ size = "compact" }: { size?: Size }) {
   const t = useTranslations("settings");
   const theme = useAppearanceStore((state) => state.theme);
-  const layout = useAppearanceStore((state) => state.layout);
   const setTheme = useAppearanceStore((state) => state.setTheme);
-  const setLayout = useAppearanceStore((state) => state.setLayout);
 
   const fields = (
-    <div className="grid gap-3">
-      <fieldset>
-        <legend className="mb-1.5 text-xs font-semibold text-muted">{t("layout")}</legend>
-        <Segmented
-          ariaLabel={t("layout")}
-          value={layout}
-          onChange={setLayout}
-          options={[
-            { value: "mobile", label: t("layoutMobile"), icon: <PhoneIcon /> },
-            { value: "desktop", label: t("layoutDesktop"), icon: <DesktopIcon /> },
-          ]}
-        />
-      </fieldset>
-      <fieldset>
-        <legend className="mb-1.5 text-xs font-semibold text-muted">{t("theme")}</legend>
-        <Segmented
-          ariaLabel={t("theme")}
-          value={theme}
-          onChange={setTheme}
-          options={[
-            { value: "light", label: t("themeLight"), icon: <SunIcon /> },
-            { value: "dark", label: t("themeDark"), icon: <MoonIcon /> },
-            { value: "system", label: t("themeSystem"), icon: <SystemIcon /> },
-          ]}
-        />
-      </fieldset>
-    </div>
+    <fieldset>
+      <legend className="mb-1.5 text-xs font-semibold text-muted">{t("theme")}</legend>
+      <Segmented
+        ariaLabel={t("theme")}
+        value={theme}
+        onChange={setTheme}
+        options={[
+          { value: "light", label: t("themeLight"), icon: <SunIcon /> },
+          { value: "dark", label: t("themeDark"), icon: <MoonIcon /> },
+          { value: "system", label: t("themeSystem"), icon: <SystemIcon /> },
+        ]}
+      />
+    </fieldset>
   );
 
   if (size === "panel") return fields;
@@ -103,16 +83,16 @@ function AppearanceMenu({ children }: { children: ReactNode }) {
   );
 }
 
-function Segmented<T extends LayoutMode | ThemeMode>({
+function Segmented({
   ariaLabel,
   value,
   onChange,
   options,
 }: {
   ariaLabel: string;
-  value: T;
-  onChange: (value: T) => void;
-  options: { value: T; label: string; icon: ReactNode }[];
+  value: ThemeMode;
+  onChange: (value: ThemeMode) => void;
+  options: { value: ThemeMode; label: string; icon: ReactNode }[];
 }) {
   return (
     <div
@@ -153,24 +133,6 @@ function GearIcon() {
         strokeLinejoin="round"
       />
       <circle cx="12" cy="12" r="2.6" stroke="currentColor" strokeWidth="1.7" />
-    </svg>
-  );
-}
-
-function PhoneIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <rect x="7" y="3" width="10" height="18" rx="2" stroke="currentColor" strokeWidth="1.7" />
-      <path d="M11 17.5h2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function DesktopIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <rect x="3" y="4" width="18" height="12" rx="2" stroke="currentColor" strokeWidth="1.7" />
-      <path d="M8 20h8M12 16v4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
     </svg>
   );
 }

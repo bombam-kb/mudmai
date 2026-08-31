@@ -5,6 +5,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 export const APPEARANCE_STORAGE_KEY = "jr-appearance";
+export const LAYOUT_BREAKPOINT = 768;
 
 export type ThemeMode = "light" | "dark" | "system";
 export type LayoutMode = "mobile" | "desktop";
@@ -12,27 +13,16 @@ export type LayoutMode = "mobile" | "desktop";
 type AppearanceState = {
   theme: ThemeMode;
   layout: LayoutMode;
-  layoutChosen: boolean;
   setTheme: (theme: ThemeMode) => void;
-  setLayout: (layout: LayoutMode) => void;
 };
 
 function systemDark() {
   return window.matchMedia("(prefers-color-scheme: dark)").matches;
 }
 
-/** Viewport default unless the user explicitly picked mobile or desktop. */
-export function resolveLayout(
-  stored: { layout?: unknown; layoutChosen?: unknown } | null | undefined,
-  viewportWidth: number,
-): LayoutMode {
-  if (
-    stored?.layoutChosen === true &&
-    (stored.layout === "mobile" || stored.layout === "desktop")
-  ) {
-    return stored.layout;
-  }
-  return viewportWidth >= 768 ? "desktop" : "mobile";
+/** Mobile UI follows the viewport, not a stored device picker. */
+export function layoutFromWidth(width: number): LayoutMode {
+  return width >= LAYOUT_BREAKPOINT ? "desktop" : "mobile";
 }
 
 export function resolvedTheme(theme: ThemeMode) {
@@ -56,29 +46,32 @@ export const useAppearanceStore = create<AppearanceState>()(
     (set) => ({
       theme: "system",
       layout: "desktop",
-      layoutChosen: false,
       setTheme: (theme) => set({ theme }),
-      setLayout: (layout) => set({ layout, layoutChosen: true }),
     }),
     {
       name: APPEARANCE_STORAGE_KEY,
       skipHydration: true,
       partialize: (state) => ({
         theme: state.theme,
-        layout: state.layout,
-        layoutChosen: state.layoutChosen,
       }),
       onRehydrateStorage: () => (state) => {
         if (typeof window === "undefined") return;
         const theme = state?.theme ?? "system";
-        const layout = resolveLayout(state, window.innerWidth);
-        const layoutChosen = state?.layoutChosen === true;
-        useAppearanceStore.setState({ layout, layoutChosen, theme });
+        const layout = layoutFromWidth(window.innerWidth);
+        useAppearanceStore.setState({ layout, theme });
         applyAppearance({ theme, layout });
       },
     },
   ),
 );
+
+export function syncLayoutFromViewport() {
+  if (typeof window === "undefined") return;
+  const layout = layoutFromWidth(window.innerWidth);
+  if (useAppearanceStore.getState().layout !== layout) {
+    useAppearanceStore.setState({ layout });
+  }
+}
 
 export function useResolvedTheme(): "light" | "dark" {
   const theme = useAppearanceStore((state) => state.theme);
@@ -96,4 +89,4 @@ export function useResolvedTheme(): "light" | "dark" {
   return theme;
 }
 
-export const APPEARANCE_BOOT = `(function(){try{var k=${JSON.stringify(APPEARANCE_STORAGE_KEY)};var theme="system";var layout=window.innerWidth>=768?"desktop":"mobile";var raw=localStorage.getItem(k);if(raw){var p=JSON.parse(raw);var s=p.state||p;if(s.theme==="light"||s.theme==="dark"||s.theme==="system")theme=s.theme;if(s.layoutChosen===true&&(s.layout==="mobile"||s.layout==="desktop"))layout=s.layout;}var dark=theme==="dark"||(theme==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);var h=document.documentElement;h.classList.toggle("dark",dark);h.setAttribute("data-layout",layout);h.style.colorScheme=dark?"dark":"light";}catch(e){}})();`;
+export const APPEARANCE_BOOT = `(function(){try{var k=${JSON.stringify(APPEARANCE_STORAGE_KEY)};var theme="system";var layout=window.innerWidth>=${LAYOUT_BREAKPOINT}?"desktop":"mobile";var raw=localStorage.getItem(k);if(raw){var p=JSON.parse(raw);var s=p.state||p;if(s.theme==="light"||s.theme==="dark"||s.theme==="system")theme=s.theme;}var dark=theme==="dark"||(theme==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);var h=document.documentElement;h.classList.toggle("dark",dark);h.setAttribute("data-layout",layout);h.style.colorScheme=dark?"dark":"light";}catch(e){}})();`;

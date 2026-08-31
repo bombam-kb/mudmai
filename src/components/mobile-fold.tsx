@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { useAppearanceStore } from "@/stores/appearance-store";
 
@@ -24,11 +24,8 @@ export function MobileFold({
   const t = useTranslations("ui");
   const layout = useAppearanceStore((state) => state.layout);
   const [open, setOpen] = useState(defaultOpen || layout !== "mobile");
-  const inited = useRef(false);
 
   useEffect(() => {
-    if (inited.current) return;
-    inited.current = true;
     if (defaultOpen) {
       setOpen(true);
       return;
