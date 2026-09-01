@@ -228,10 +228,12 @@ model ReminderLog {
   channel ReminderChannel
   title   String
   body    String          @db.Text
+  kind    String          @default("DAILY")
   isRead  Boolean         @default(false)
   sentAt  DateTime        @default(now())
 
   @@index([userId, sentAt])
+  @@index([userId, kind, sentAt])
 }
 
 model PastYearReflection {

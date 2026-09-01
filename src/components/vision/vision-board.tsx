@@ -3,7 +3,9 @@
 import dynamic from "next/dynamic";
 import { useRouter } from "@/i18n/navigation";
 import { AppShell } from "@/components/app-shell";
+import { VisionDesktopNotice } from "@/components/vision/vision-notice";
 import { signOutClient } from "@/lib/auth/sign-out-client";
+import { useClientLayout } from "@/stores/appearance-store";
 
 const VisionCanvas = dynamic(
   () => import("./canvas").then((mod) => mod.VisionCanvas),
@@ -25,11 +27,20 @@ type Props = {
 
 export function VisionBoard(props: Props) {
   const router = useRouter();
+  const layout = useClientLayout();
 
   async function signOut() {
     await signOutClient();
     router.replace("/");
     router.refresh();
+  }
+
+  if (layout !== "desktop") {
+    return (
+      <AppShell onSignOut={signOut}>
+        {layout === "mobile" ? <VisionDesktopNotice /> : null}
+      </AppShell>
+    );
   }
 
   return (

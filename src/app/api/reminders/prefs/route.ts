@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/auth/require-api-user";
 import { prisma } from "@/lib/prisma";
-import { DEFAULT_PREFS, mergePrefs, toPrefDto } from "@/lib/reminders/schema";
-import { parsePrefPatch } from "@/lib/reminders/schema";
+import {
+  DEFAULT_PREFS,
+  mergePrefs,
+  parseMasterEnabled,
+  parsePrefPatch,
+  toPrefDto,
+} from "@/lib/reminders/schema";
 import { rateLimitJson } from "@/lib/http/rate-limit";
 
 async function ensurePrefs(userId: string) {
@@ -52,7 +57,24 @@ export async function PUT(request: Request) {
     return NextResponse.json({ ok: false, reason: "database" }, { status: 503 });
   }
 
-  const parsed = parsePrefPatch(await request.json().catch(() => null));
+  const body = await request.json().catch(() => null);
+  const master = parseMasterEnabled(body);
+  await ensurePrefs(user.id);
+
+  if (master.ok) {
+    await prisma.reminderPreference.updateMany({
+      where: { userId: user.id },
+      data: { enabled: master.enabled },
+    });
+    const rows = await prisma.reminderPreference.findMany({ where: { userId: user.id } });
+    return NextResponse.json({
+      ok: true,
+      prefs: mergePrefs(rows.map(toPrefDto)),
+      enabled: master.enabled,
+    });
+  }
+
+  const parsed = parsePrefPatch(body);
   if (!parsed.ok) {
     return NextResponse.json({ ok: false, error: parsed.error }, { status: 400 });
   }

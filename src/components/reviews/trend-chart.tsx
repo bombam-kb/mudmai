@@ -2,7 +2,6 @@
 
 import { PILLARS } from "@/lib/pillars";
 import type { MonthlyReviewDto } from "@/lib/reviews/schema";
-import { useTranslations } from "next-intl";
 
 type Props = {
   year: number;
@@ -10,7 +9,6 @@ type Props = {
 };
 
 export function PillarTrendChart({ year, reviews }: Props) {
-  const t = useTranslations("calendar");
   const byMonth = new Map(reviews.map((review) => [review.month, review]));
   const width = 640;
   const height = 240;
@@ -29,8 +27,8 @@ export function PillarTrendChart({ year, reviews }: Props) {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <svg viewBox={`0 0 ${width} ${height}`} className="h-56 min-w-[36rem] w-full">
+    <div className="jr-trend-chart">
+      <svg viewBox={`0 0 ${width} ${height}`} className="h-auto w-full">
         {[1, 2, 3, 4, 5].map((value) => (
           <g key={value}>
             <line
@@ -90,7 +88,7 @@ export function PillarTrendChart({ year, reviews }: Props) {
             fontSize="11"
             fill="#64748b"
           >
-            {t(`months.${index + 1}`).slice(0, 3)}
+            {index + 1}
           </text>
         ))}
       </svg>

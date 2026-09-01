@@ -97,7 +97,7 @@ export function ReminderInbox({ name, demoMode, initialLogs }: Props) {
                     {t(`cadence.${log.cadence}`)}
                   </p>
                   <h2 className="mt-1 font-display text-2xl">{log.title}</h2>
-                  <p className="mt-1 text-sm text-muted">{log.body}</p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm text-muted">{log.body}</p>
                   <p className="mt-2 text-xs text-muted">
                     {new Date(log.sentAt).toLocaleString()}
                   </p>

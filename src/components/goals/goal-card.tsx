@@ -78,7 +78,7 @@ export function GoalCard({ goal, demoMode, onChange }: Props) {
       style={{ borderTop: `5px solid ${pillar.color}` }}
     >
       <div className="jr-goal-head flex items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted">
             <PillarIcon id={goal.pillar} size={16} /> {tp(goal.pillar)} · Q{goal.quarter}
           </p>
@@ -87,7 +87,7 @@ export function GoalCard({ goal, demoMode, onChange }: Props) {
         <select
           value={goal.status}
           onChange={(event) => patch({ status: event.target.value as GoalDto["status"] })}
-          className="rounded-full bg-slate-50 px-2 py-1 text-xs font-semibold"
+          className="jr-goal-status max-w-full rounded-full bg-slate-50 px-2 py-1 text-xs font-semibold"
         >
           {GOAL_STATUSES.map((status) => (
             <option key={status} value={status}>
@@ -111,7 +111,7 @@ export function GoalCard({ goal, demoMode, onChange }: Props) {
           />
         </div>
       </div>
-      <label className="mt-3 flex items-center gap-2 text-sm">
+      <label className="jr-goal-progress mt-3 flex items-center gap-2 text-sm">
         {t("updateProgress")}
         <input
           type="number"

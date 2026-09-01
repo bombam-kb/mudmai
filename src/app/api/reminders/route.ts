@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/auth/require-api-user";
 import { prisma } from "@/lib/prisma";
-import { dispatchOne } from "@/lib/reminders/dispatch";
-import { CADENCES, toLogDto, type CadenceId } from "@/lib/reminders/schema";
+import { dispatchUserReminders } from "@/lib/reminders/dispatch";
+import { toLogDto } from "@/lib/reminders/schema";
 import { rateLimitJson } from "@/lib/http/rate-limit";
 
 export async function GET() {
@@ -26,7 +26,7 @@ export async function GET() {
   });
 }
 
-export async function POST(request: Request) {
+export async function POST() {
   const auth = await requireApiUser();
   if (!auth.ok) return auth.response;
   const { user } = auth;
@@ -36,14 +36,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, reason: "database" }, { status: 503 });
   }
 
-  const body = (await request.json().catch(() => null)) as {
-    cadence?: string;
-  } | null;
-  const cadence = String(body?.cadence ?? "") as CadenceId;
-  if (!CADENCES.includes(cadence)) {
-    return NextResponse.json({ ok: false, error: "cadence" }, { status: 400 });
-  }
-
   const profile = await prisma.user.findUnique({
     where: { id: user.id },
     select: {
@@ -51,23 +43,18 @@ export async function POST(request: Request) {
       lineAccount: true,
     },
   });
-  const result = await dispatchOne({
+  const result = await dispatchUserReminders({
     userId: user.id,
-    cadence,
     locale: profile?.preferredLocale === "en" ? "en" : "th",
     lineUserId: profile?.lineAccount?.lineUserId,
     lineReachable: Boolean(profile?.lineAccount?.reachable),
     lineOptIn: Boolean(profile?.lineAccount?.reminderOptIn),
   });
-  if (result === "skipped") {
-    return NextResponse.json({ ok: true, skipped: true });
+  if (result.sent === 0) {
+    return NextResponse.json({ ok: true, skipped: true, logs: [] });
   }
 
-  const log = await prisma.reminderLog.findFirst({
-    where: { userId: user.id, cadence },
-    orderBy: { sentAt: "desc" },
-  });
-  return NextResponse.json({ ok: true, log: log ? toLogDto(log) : undefined });
+  return NextResponse.json({ ok: true, logs: result.logs });
 }
 
 export async function PATCH() {

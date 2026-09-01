@@ -6,8 +6,10 @@ import {
   syncLayoutFromViewport,
   useAppearanceStore,
 } from "@/stores/appearance-store";
+import { useMobileKeyboard } from "@/hooks/use-mobile-keyboard";
 
 export function AppearanceProvider({ children }: { children: React.ReactNode }) {
+  useMobileKeyboard();
   useEffect(() => {
     const unsub = useAppearanceStore.subscribe((state) => applyAppearance(state));
     void useAppearanceStore.persist.rehydrate();

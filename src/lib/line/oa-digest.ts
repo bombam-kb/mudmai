@@ -20,7 +20,7 @@ export function digestMessages(locale: "th" | "en", text: string) {
   ];
 }
 
-function withOpenLink(locale: "th" | "en", text: string, path: string) {
+export function withOpenLink(locale: "th" | "en", text: string, path: string) {
   if (!lineUriOk()) return text;
   const label = locale === "en" ? "Open in app" : "เปิดในแอป";
   return `${text}\n\n${label}\n${lineAppHref(locale, path)}`;

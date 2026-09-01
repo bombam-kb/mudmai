@@ -109,7 +109,7 @@ function AppearanceMenu({
         aria-controls={menuId}
         title={t("appearanceMenu")}
         onClick={() => setOpen((value) => !value)}
-        className={`grid h-9 w-9 place-items-center rounded-full bg-white shadow-sm ring-1 ring-slate-200 transition ${
+        className={`jr-gear grid h-9 w-9 place-items-center rounded-full bg-white shadow-sm ring-1 ring-slate-200 transition ${
           open ? "text-brand ring-brand/40" : "text-ink hover:text-brand"
         }`}
       >

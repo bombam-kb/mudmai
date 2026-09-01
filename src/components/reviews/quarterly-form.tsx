@@ -132,11 +132,12 @@ export function QuarterlyReviewForm({
           <ul className="mt-3 space-y-4">
             {mergeOutcomes(form.goalOutcomes, liveGoals).map((goal) => (
               <li key={goal.goalId} className="rounded-2xl bg-slate-50 p-3">
-                <div className="flex justify-between gap-2 text-sm font-semibold">
-                  <span className="inline-flex items-center gap-1.5">
-                    <PillarIcon id={goal.pillar} size={16} /> {goal.title}
+                <div className="flex min-w-0 flex-wrap justify-between gap-2 text-sm font-semibold">
+                  <span className="inline-flex min-w-0 flex-1 items-center gap-1.5">
+                    <PillarIcon id={goal.pillar} size={16} />
+                    <span className="min-w-0 break-words">{goal.title}</span>
                   </span>
-                  <span className="text-muted">
+                  <span className="shrink-0 text-muted">
                     {Math.round(goal.progress)}% · {tg(`statuses.${goal.status}`)}
                   </span>
                 </div>

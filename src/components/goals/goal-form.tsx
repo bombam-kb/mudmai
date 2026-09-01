@@ -180,7 +180,7 @@ export function GoalForm({ demoMode, initial, quarter, pillar }: Props) {
 
       <section className="rounded-[2rem] bg-white p-5 shadow-card ring-1 ring-slate-100 sm:p-6">
         <p className="text-sm font-semibold text-muted">{t("measurePrompt")}</p>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="jr-measure-row mt-3 flex flex-wrap items-center gap-2">
           <span className="text-sm text-muted">{t("measureHit")}</span>
           <input
             required
@@ -211,7 +211,7 @@ export function GoalForm({ demoMode, initial, quarter, pillar }: Props) {
             value={form.deadline || bounds.end}
             onChange={(event) => update("deadline", event.target.value)}
             aria-label={t("deadline")}
-            className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 outline-none ring-brand/30 focus:bg-white focus:ring-2"
+            className="min-w-0 max-w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 outline-none ring-brand/30 focus:bg-white focus:ring-2"
           />
           <button
             type="button"

@@ -34,6 +34,11 @@ export function emptyMonthPlan(year: number, month: number): MonthPlanDto {
   return { year, month, importantNote: "", goals: [] };
 }
 
+export function isMonthPlanFilled(plan: MonthPlanDto | null | undefined) {
+  if (!plan) return false;
+  return plan.importantNote.trim().length > 0 || plan.goals.length > 0;
+}
+
 export function isYearMonth(year: unknown, month: unknown) {
   return (
     typeof year === "number" &&

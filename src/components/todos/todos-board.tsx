@@ -6,6 +6,7 @@ import { AppShell } from "@/components/app-shell";
 import { TodoList } from "@/components/todos/todo-list";
 import { Link, useRouter } from "@/i18n/navigation";
 import { signOutClient } from "@/lib/auth/sign-out-client";
+import { NavIcon } from "@/components/icons";
 import type { GoalOption, TodoDto } from "@/lib/todos/schema";
 import { todoStats } from "@/lib/todos/schema";
 import { activeCalendarYear, localYmd, shiftYmd } from "@/lib/year";
@@ -143,9 +144,12 @@ export function TodosBoard({
         </div>
         <Link
           href="/calendar"
-          className="rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-white"
+          title={t("openCalendar")}
+          aria-label={t("openCalendar")}
+          className="jr-icon-link inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2.5 text-sm font-semibold text-white"
         >
-          {t("openCalendar")}
+          <NavIcon name="calendar" size={16} />
+          <span className="jr-btn-label">{t("openCalendar")}</span>
         </Link>
       </div>
 

@@ -42,10 +42,10 @@ export function PillarPicker({
   const surface = tone === "plain" ? "bg-white" : "bg-slate-50";
   const buttonClass =
     size === "featured"
-      ? `inline-flex h-full items-center gap-2 rounded-2xl border border-slate-200 ${surface} px-3 py-3.5 text-sm font-semibold text-muted outline-none ring-brand/30 hover:bg-white focus:bg-white focus:ring-2 disabled:opacity-50`
+      ? `jr-picker-trigger inline-flex h-full items-center justify-center gap-2 rounded-2xl border border-slate-200 ${surface} px-3 py-3.5 text-sm font-semibold text-muted outline-none ring-brand/30 hover:bg-white focus:bg-white focus:ring-2 disabled:opacity-50`
       : size === "field"
-        ? `inline-flex h-full items-center gap-2 rounded-2xl border border-slate-200 ${surface} px-3 py-2.5 text-sm font-semibold text-muted outline-none ring-brand/30 hover:bg-white focus:bg-white focus:ring-2 disabled:opacity-50`
-        : "inline-flex max-w-[10.5rem] items-center gap-1.5 rounded-full bg-white px-2 py-1 text-xs font-semibold text-muted ring-1 ring-slate-200 disabled:opacity-50";
+        ? `jr-picker-trigger inline-flex h-full items-center justify-center gap-2 rounded-2xl border border-slate-200 ${surface} px-3 py-2.5 text-sm font-semibold text-muted outline-none ring-brand/30 hover:bg-white focus:bg-white focus:ring-2 disabled:opacity-50`
+        : "jr-picker-trigger inline-flex max-w-[10.5rem] items-center justify-center gap-1.5 rounded-full bg-white px-2 py-1 text-xs font-semibold text-muted ring-1 ring-slate-200 disabled:opacity-50";
 
   return (
     <div ref={rootRef} className={`relative min-w-0 ${tall ? "self-stretch" : ""} ${className}`}>
@@ -54,9 +54,10 @@ export function PillarPicker({
         disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label={t("pillar")}
+        aria-label={selected ? `${t("pillar")}: ${tp(selected.id)}` : t("pillar")}
+        title={selected ? tp(selected.id) : t("pickPillar")}
         onClick={() => setOpen((current) => !current)}
-        className={buttonClass}
+        className={`${buttonClass} ${tall ? "w-full" : ""}`}
       >
         {selected ? (
           <>
@@ -68,16 +69,16 @@ export function PillarPicker({
             >
               <PillarIcon id={selected.id} size={tall ? 13 : 11} />
             </span>
-            <span className="truncate">{tp(selected.id)}</span>
+            <span className="jr-picker-label truncate">{tp(selected.id)}</span>
           </>
         ) : (
-          t("pickPillar")
+          <span className="jr-picker-label">{t("pickPillar")}</span>
         )}
       </button>
       {open ? (
         <ul
           role="listbox"
-          className="absolute right-0 z-30 mt-1 min-w-[12rem] rounded-2xl bg-white p-1 shadow-card ring-1 ring-slate-100"
+          className="jr-picker-menu absolute right-0 z-30 mt-1 min-w-[12rem] rounded-2xl bg-white p-1 shadow-card ring-1 ring-slate-100"
         >
           {allowEmpty ? (
             <li>

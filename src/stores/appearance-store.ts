@@ -73,6 +73,23 @@ export function syncLayoutFromViewport() {
   }
 }
 
+/** Layout after boot script / viewport sync — avoids SSR assuming desktop. */
+export function useClientLayout(): LayoutMode | null {
+  const storeLayout = useAppearanceStore((state) => state.layout);
+  const [layout, setLayout] = useState<LayoutMode | null>(null);
+
+  useEffect(() => {
+    const fromDom = document.documentElement.dataset.layout;
+    if (fromDom === "mobile" || fromDom === "desktop") {
+      setLayout(fromDom);
+      return;
+    }
+    setLayout(storeLayout);
+  }, [storeLayout]);
+
+  return layout;
+}
+
 export function useResolvedTheme(): "light" | "dark" {
   const theme = useAppearanceStore((state) => state.theme);
   const [dark, setDark] = useState(false);

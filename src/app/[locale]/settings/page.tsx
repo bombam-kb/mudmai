@@ -7,6 +7,7 @@ import { ensureReferralCode } from "@/lib/referrals/code";
 import { getReferralSummary } from "@/lib/referrals/service";
 import { getLineLinkStatus } from "@/lib/line/account";
 import { isLineLoginConfigured, isLineMessagingConfigured } from "@/lib/env";
+import { toNudgeDto } from "@/lib/nudge/schema";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -19,7 +20,7 @@ export default async function SettingsPage({ params, searchParams }: Props) {
   const { locale } = await params;
   const { error } = await searchParams;
   setRequestLocale(locale);
-  const session = await requireAppUser(locale);
+  const session = await requireAppUser(locale, { withReflection: true });
 
   if (session.demoMode) {
     return (
@@ -33,12 +34,23 @@ export default async function SettingsPage({ params, searchParams }: Props) {
     );
   }
 
-  const [prefs, referralCode, referralSummary, lineStatus] = await Promise.all([
-    prisma.reminderPreference.findMany({ where: { userId: session.user.id } }).catch(() => []),
-    ensureReferralCode(session.user.id).catch(() => null),
-    getReferralSummary(session.user.id).catch(() => null),
-    getLineLinkStatus(session.user.id).catch(() => null),
-  ]);
+  const [prefs, referralCode, referralSummary, lineStatus, nudges, unreadReminders] =
+    await Promise.all([
+      prisma.reminderPreference.findMany({ where: { userId: session.user.id } }).catch(() => []),
+      ensureReferralCode(session.user.id).catch(() => null),
+      getReferralSummary(session.user.id).catch(() => null),
+      getLineLinkStatus(session.user.id).catch(() => null),
+      prisma.aiNudgeLog
+        .findMany({
+          where: { userId: session.user.id, isRead: false },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+        })
+        .catch(() => []),
+      prisma.reminderLog
+        .count({ where: { userId: session.user.id, isRead: false } })
+        .catch(() => 0),
+    ]);
 
   let prefRows = prefs;
   if (lineStatus?.reminderOptIn) {
@@ -76,6 +88,26 @@ export default async function SettingsPage({ params, searchParams }: Props) {
           : null,
       }}
       lineError={error}
+      unreadReminders={unreadReminders}
+      nudges={nudges.map(toNudgeDto)}
+      reflection={
+        session.reflection
+          ? {
+              healingThings: session.reflection.healingThings,
+              happiestMoment: session.reflection.happiestMoment,
+              expectationsNextYear: session.reflection.expectationsNextYear,
+              lastYearStory: session.reflection.lastYearStory,
+              ratings: {
+                CAREER: session.reflection.ratingCareer,
+                PERSONAL: session.reflection.ratingPersonal,
+                FINANCE: session.reflection.ratingFinance,
+                RELATIONSHIPS: session.reflection.ratingRelationships,
+                MENTAL_HEALTH: session.reflection.ratingMental,
+                PHYSICAL_HEALTH: session.reflection.ratingPhysical,
+              },
+            }
+          : null
+      }
     />
   );
 }

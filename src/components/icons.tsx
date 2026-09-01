@@ -216,6 +216,54 @@ export function PencilIcon({ size = 16, className, title }: IconProps) {
   );
 }
 
+export function PlusIcon({ size = 16, className, title }: IconProps) {
+  return (
+    <Svg size={size} className={className} title={title}>
+      <path d="M12 5v14M5 12h14" {...stroke} />
+    </Svg>
+  );
+}
+
+export function TrashIcon({ size = 16, className, title }: IconProps) {
+  return (
+    <Svg size={size} className={className} title={title}>
+      <path d="M5 7h14" {...stroke} />
+      <path d="M10 7V5h4v2" {...stroke} />
+      <path d="M8.2 7 9 19h6l.8-12" {...stroke} />
+    </Svg>
+  );
+}
+
+export function ListIcon({ size = 16, className, title }: IconProps) {
+  return (
+    <Svg size={size} className={className} title={title}>
+      <path d="M8 7h12M8 12h12M8 17h12" {...stroke} />
+      <circle cx="4.5" cy="7" r="1.1" fill="currentColor" stroke="none" />
+      <circle cx="4.5" cy="12" r="1.1" fill="currentColor" stroke="none" />
+      <circle cx="4.5" cy="17" r="1.1" fill="currentColor" stroke="none" />
+    </Svg>
+  );
+}
+
+export function PostponeIcon({ size = 16, className, title }: IconProps) {
+  return (
+    <Svg size={size} className={className} title={title}>
+      <rect x="4" y="5.5" width="16" height="14.5" rx="2" {...stroke} />
+      <path d="M8 4v3.5M16 4v3.5M4 10h16" {...stroke} />
+      <path d="M12 13.2v4.2l2.4-1.5" {...stroke} />
+    </Svg>
+  );
+}
+
+export function BellIcon({ size = 16, className, title }: IconProps) {
+  return (
+    <Svg size={size} className={className} title={title}>
+      <path d="M6.2 16.5h11.6l-1.3-2.3V10a4.5 4.5 0 1 0-9 0v4.2Z" {...stroke} />
+      <path d="M10 17.2a2 2 0 0 0 4 0" {...stroke} />
+    </Svg>
+  );
+}
+
 export function BrandLockup({ className }: { className?: string }) {
   const t = useTranslations("brand");
   return (
@@ -267,6 +315,22 @@ export function AiSparkle({
         d="M19.2 1.6c.14 1.02.62 1.92 1.38 2.68.76.76 1.66 1.24 2.68 1.38-1.02.14-1.92.62-2.68 1.38-.76.76-1.24 1.66-1.38 2.68-.14-1.02-.62-1.92-1.38-2.68-.76-.76-1.66-1.24-2.68-1.38 1.02-.14 1.92-.62 2.68-1.38.76-.76 1.24-1.66 1.38-2.68Z"
       />
     </svg>
+  );
+}
+
+export function ChevronLeftIcon({ size = 18, className, title }: IconProps) {
+  return (
+    <Svg size={size} className={className} title={title}>
+      <path d="M14.5 5 8 12l6.5 7" {...stroke} />
+    </Svg>
+  );
+}
+
+export function ChevronRightIcon({ size = 18, className, title }: IconProps) {
+  return (
+    <Svg size={size} className={className} title={title}>
+      <path d="M9.5 5 16 12l-6.5 7" {...stroke} />
+    </Svg>
   );
 }
 

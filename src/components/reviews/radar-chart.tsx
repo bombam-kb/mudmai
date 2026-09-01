@@ -36,7 +36,7 @@ export function RadarChart({ ratings, compare }: Props) {
   }
 
   return (
-    <svg viewBox="0 0 280 280" className="mx-auto h-64 w-64">
+    <svg viewBox="0 0 280 280" className="mx-auto h-auto w-full max-w-[16rem]">
       {[1, 2, 3, 4, 5].map((value) => (
         <polygon
           key={value}

@@ -1,17 +1,14 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { AppShell } from "@/components/app-shell";
 import { Link, useRouter } from "@/i18n/navigation";
 import { signOutClient } from "@/lib/auth/sign-out-client";
 import { todoStats, type TodoDto } from "@/lib/todos/schema";
-import { localYmd, monthCells } from "@/lib/year";
+import { localYmd, monthDayList, weekdayKey } from "@/lib/year";
 import { useTodosStore } from "@/stores/todos-store";
-import { MonthPlanCard } from "@/components/month-plan/month-plan-card";
-import type { MonthPlanDto } from "@/lib/month-plan/schema";
-
-const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+import { PillarIcon, ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
 
 type Props = {
   name: string;
@@ -19,7 +16,6 @@ type Props = {
   year: number;
   month: number;
   initialTodos: TodoDto[];
-  initialPlan?: MonthPlanDto | null;
 };
 
 export function MonthCalendar({
@@ -28,20 +24,20 @@ export function MonthCalendar({
   year,
   month,
   initialTodos,
-  initialPlan = null,
 }: Props) {
   const t = useTranslations("calendar");
   const tt = useTranslations("todos");
   const router = useRouter();
   const stored = useTodosStore((state) => state.todos);
   const today = localYmd();
-  const cells = monthCells(year, month);
+  const days = monthDayList(year, month);
   const source = demoMode ? stored : initialTodos;
   const inView = useMemo(() => {
-    const start = cells[0].ymd;
-    const end = cells[cells.length - 1].ymd;
+    const start = days[0]?.ymd;
+    const end = days[days.length - 1]?.ymd;
+    if (!start || !end) return [];
     return source.filter((todo) => todo.date >= start && todo.date <= end);
-  }, [cells, source]);
+  }, [days, source]);
 
   const byDate = useMemo(() => {
     const map = new Map<string, TodoDto[]>();
@@ -53,8 +49,12 @@ export function MonthCalendar({
     return map;
   }, [inView]);
 
-  const monthTodos = inView.filter((todo) => todo.date.slice(0, 7) === `${year}-${String(month).padStart(2, "0")}`);
+  const monthTodos = inView.filter(
+    (todo) => todo.date.slice(0, 7) === `${year}-${String(month).padStart(2, "0")}`,
+  );
   const monthRate = todoStats(monthTodos).rate;
+  const inThisMonth = today.startsWith(`${year}-${String(month).padStart(2, "0")}`);
+  const [openYmd, setOpenYmd] = useState<string | null>(inThisMonth ? today : null);
 
   async function signOut() {
     await signOutClient();
@@ -67,54 +67,49 @@ export function MonthCalendar({
   const todayYear = Number(today.slice(0, 4));
   const todayMonth = Number(today.slice(5, 7));
   const isCurrentMonth = year === todayYear && month === todayMonth;
-  const jumpTodayClass =
-    "rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white";
+  const pagerLabel = isCurrentMonth
+    ? t("thisMonth")
+    : t("title", { month: t(`months.${month}`), year });
 
   return (
     <AppShell name={name} onSignOut={signOut}>
-      <div className="jr-page-head mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
+      <div className="jr-page-head jr-cal-toolbar mb-4 flex items-end justify-between gap-3">
+        <div className="min-w-0">
           <p className="text-sm font-semibold uppercase tracking-wide text-personal">
             {t("eyebrow")}
           </p>
-          <h1 className="font-display text-4xl">
-            {t("title", { month: t(`months.${month}`), year })}
-          </h1>
           <p className="mt-1 text-sm text-muted">{t("monthRate", { rate: monthRate })}</p>
         </div>
-        <div className="jr-chip-rail">
+        {isCurrentMonth ? (
+          <span className="jr-cal-today is-now">{t("jumpToday")}</span>
+        ) : (
           <Link
-            href={`/calendar?year=${prev.year}&month=${prev.month}`}
-            className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-muted ring-1 ring-slate-200"
+            href={`/calendar?year=${todayYear}&month=${todayMonth}`}
+            className="jr-cal-today"
           >
-            {t("prev")}
+            {t("jumpToday")}
           </Link>
-          {isCurrentMonth ? (
-            <span className={jumpTodayClass}>{t("jumpToday")}</span>
-          ) : (
-            <Link
-              href={`/calendar?year=${todayYear}&month=${todayMonth}`}
-              className={jumpTodayClass}
-            >
-              {t("jumpToday")}
-            </Link>
-          )}
-          <Link
-            href={`/calendar?year=${next.year}&month=${next.month}`}
-            className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-muted ring-1 ring-slate-200"
-          >
-            {t("next")}
-          </Link>
-        </div>
+        )}
       </div>
 
-      <div className="mb-6">
-        <MonthPlanCard
-          year={year}
-          month={month}
-          demoMode={demoMode}
-          initialPlan={initialPlan}
-        />
+      <div className="jr-month-pager mb-6">
+        <Link
+          href={`/calendar?year=${prev.year}&month=${prev.month}`}
+          className="jr-month-pager-btn"
+          aria-label={t("prev")}
+        >
+          <ChevronLeftIcon size={16} />
+          <span>{t("prev")}</span>
+        </Link>
+        <h1 className="jr-month-pager-now">{pagerLabel}</h1>
+        <Link
+          href={`/calendar?year=${next.year}&month=${next.month}`}
+          className="jr-month-pager-btn"
+          aria-label={t("next")}
+        >
+          <span>{t("next")}</span>
+          <ChevronRightIcon size={16} />
+        </Link>
       </div>
 
       {demoMode ? (
@@ -123,58 +118,70 @@ export function MonthCalendar({
         </p>
       ) : null}
 
-      <div className="jr-month-cal overflow-hidden rounded-3xl bg-white shadow-card ring-1 ring-slate-100">
-        <div className="jr-cal-head grid grid-cols-7 border-b border-slate-100 bg-slate-50 text-center text-xs font-semibold uppercase tracking-wide text-muted">
-          {WEEKDAYS.map((day) => (
-            <div key={day} className="px-2 py-3">
-              {t(`weekdays.${day}`)}
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7">
-          {cells.map((cell) => {
-            const dayTodos = byDate.get(cell.ymd) ?? [];
-            const stats = todoStats(dayTodos);
-            const isToday = cell.ymd === today;
-            return (
-              <Link
-                key={cell.ymd}
-                href={`/todos?date=${cell.ymd}`}
-                className={`jr-cal-cell min-h-[6.5rem] border-b border-r border-slate-100 p-2 text-left transition hover:bg-violet-50 ${
-                  cell.inMonth ? "bg-white" : "bg-slate-50/70"
-                } ${isToday ? "ring-2 ring-inset ring-brand" : ""}`}
+      <section className="jr-day-list">
+        {days.map((cell) => {
+          const dayTodos = byDate.get(cell.ymd) ?? [];
+          const stats = todoStats(dayTodos);
+          const isToday = cell.ymd === today;
+          const open = openYmd === cell.ymd;
+          return (
+            <div
+              key={cell.ymd}
+              className={`jr-day-block ${isToday ? "jr-day-today" : ""} ${open ? "jr-day-open" : ""}`}
+            >
+              <button
+                type="button"
+                className="jr-day-row"
+                aria-expanded={open}
+                onClick={() => setOpenYmd(open ? null : cell.ymd)}
               >
-                <div className="flex items-center justify-between">
-                  <span
-                    className={`grid h-7 w-7 place-items-center rounded-full text-sm font-semibold ${
-                      isToday
-                        ? "bg-brand text-white"
-                        : cell.inMonth
-                          ? "text-ink"
-                          : "text-slate-400"
-                    }`}
-                  >
-                    {cell.day}
-                  </span>
-                  {stats.total > 0 ? (
-                    <span className="jr-cal-count text-[11px] font-semibold text-muted">
-                      {t("count", { completed: stats.completed, total: stats.total })}
-                    </span>
-                  ) : null}
-                </div>
-                {stats.total > 0 ? (
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
-                    <div
-                      className="h-full rounded-full bg-emerald-400"
-                      style={{ width: `${stats.rate}%` }}
+                <span className="jr-day-num">{cell.day}</span>
+                <span className="jr-day-name">
+                  {t(`weekdays.${weekdayKey(cell.ymd)}`)}
+                  {isToday ? <span className="jr-day-badge">{t("jumpToday")}</span> : null}
+                </span>
+                <span className="jr-day-rate">
+                  {stats.total > 0 ? t("dayRate", { rate: stats.rate }) : t("dayEmpty")}
+                </span>
+                <span className="jr-fold-chevron" aria-hidden>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path
+                      d="M4 6.5 8 10.5 12 6.5"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                     />
-                  </div>
-                ) : null}
-              </Link>
-            );
-          })}
-        </div>
-      </div>
+                  </svg>
+                </span>
+              </button>
+              {open ? (
+                <div className="jr-day-body">
+                  {dayTodos.length === 0 ? (
+                    <p className="jr-day-empty">{t("noTasks")}</p>
+                  ) : (
+                    <ul className="jr-day-items">
+                      {dayTodos.map((todo) => (
+                        <li
+                          key={todo.id}
+                          className={`jr-day-item ${todo.isCompleted ? "is-done" : ""}`}
+                        >
+                          <span className={`jr-day-check ${todo.isCompleted ? "is-on" : ""}`} aria-hidden />
+                          {todo.pillar ? <PillarIcon id={todo.pillar} size={14} /> : null}
+                          <span className="min-w-0 flex-1">{todo.title}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <Link href={`/todos?date=${cell.ymd}`} className="jr-day-open-link">
+                    {t("openDay")}
+                  </Link>
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+      </section>
     </AppShell>
   );
 }

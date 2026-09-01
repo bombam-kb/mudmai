@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { CADENCES, CHANNELS, mergePrefs, type ChannelId, type ReminderPrefDto } from "@/lib/reminders/schema";
+import { mergePrefs, notificationsOn, type ReminderPrefDto } from "@/lib/reminders/schema";
 import { useRemindersStore } from "@/stores/reminders-store";
 import type { LineStatusDto } from "@/components/settings/line-connect";
 
@@ -24,35 +24,33 @@ export function ReminderSettingsCard({
   const locale = useLocale();
   const storedPrefs = useRemindersStore((state) => state.prefs);
   const [prefs, setPrefs] = useState(initialPrefs);
-  const [saving, setSaving] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
   const source = mergePrefs(demoMode ? storedPrefs : prefs);
+  const enabled = notificationsOn(source);
   const lineReady = Boolean(line?.linked && line.messagingConfigured);
-  const usesLine = source.some((pref) => pref.enabled && pref.channel === "LINE");
 
-  async function save(pref: ReminderPrefDto) {
-    setSaving(pref.cadence);
+  async function setEnabled(next: boolean) {
+    setSaving(true);
     setNotice("");
     try {
       if (demoMode) {
-        useRemindersStore.getState().setPref(pref);
+        useRemindersStore.getState().replacePrefs(source.map((pref) => ({ ...pref, enabled: next })));
       } else {
         const response = await fetch("/api/reminders/prefs", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(pref),
+          body: JSON.stringify({ enabled: next }),
         });
-        const json = (await response.json()) as { ok: boolean; pref?: ReminderPrefDto };
-        if (!json.ok || !json.pref) throw new Error("save");
-        setPrefs((current) =>
-          current.map((item) => (item.cadence === json.pref!.cadence ? json.pref! : item)),
-        );
+        const json = (await response.json()) as { ok: boolean; prefs?: ReminderPrefDto[] };
+        if (!json.ok || !json.prefs) throw new Error("save");
+        setPrefs(json.prefs);
       }
       setNotice(t("saved"));
     } catch {
       setNotice(t("error"));
     } finally {
-      setSaving(null);
+      setSaving(false);
     }
   }
 
@@ -69,57 +67,12 @@ export function ReminderSettingsCard({
     return true;
   }
 
-  async function enableBrowser(pref: ReminderPrefDto) {
-    if (!("Notification" in window)) {
-      setNotice(t("notifyUnsupported"));
-      return;
-    }
-    const permission = await Notification.requestPermission();
-    if (permission !== "granted") {
-      setNotice(t("notifyDenied"));
-      return;
-    }
-    await save({ ...pref, channel: "BROWSER" });
-  }
-
-  async function setChannel(pref: ReminderPrefDto, channel: ChannelId) {
-    if (channel === "BROWSER") {
-      await enableBrowser(pref);
-      return;
-    }
-    if (channel === "LINE") {
-      if (!line?.loginConfigured) {
-        setNotice(t("lineChannelUnavailable"));
-        return;
-      }
-      if (!line.linked) {
-        setNotice(t("lineConnectFirst"));
-        return;
-      }
-      if (!line.messagingConfigured) {
-        setNotice(t("lineMessagingOff"));
-        return;
-      }
-      if (!line.reminderOptIn) {
-        const ok = await patchLine({ reminderOptIn: true });
-        if (!ok) {
-          setNotice(t("error"));
-          return;
-        }
-      }
-    }
-    await save({ ...pref, channel });
-  }
-
-  async function toggleLineMethod(on: boolean) {
-    setSaving("line");
+  async function toggleLine(on: boolean) {
+    setSaving(true);
     setNotice("");
     try {
       if (!on) {
         if (line?.linked) await patchLine({ reminderOptIn: false });
-        for (const pref of source) {
-          if (pref.channel === "LINE") await save({ ...pref, channel: "IN_APP" });
-        }
         return;
       }
       if (!line?.linked) {
@@ -128,15 +81,10 @@ export function ReminderSettingsCard({
       }
       const ok = await patchLine({ reminderOptIn: true });
       if (!ok) throw new Error("line");
-      for (const pref of source) {
-        if (pref.enabled && pref.channel === "IN_APP") {
-          await save({ ...pref, channel: "LINE" });
-        }
-      }
     } catch {
       setNotice(t("error"));
     } finally {
-      setSaving(null);
+      setSaving(false);
     }
   }
 
@@ -150,17 +98,31 @@ export function ReminderSettingsCard({
         </p>
       ) : null}
 
-      <div className="mt-5 rounded-2xl bg-violet-50/80 p-4 ring-1 ring-violet-100">
+      <label className="mt-5 flex min-h-11 items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3">
+        <span>
+          <span className="block font-semibold">{t("remindersToggle")}</span>
+          <span className="mt-0.5 block text-xs text-muted">{t("remindersToggleHint")}</span>
+        </span>
+        <input
+          type="checkbox"
+          className="h-5 w-5"
+          checked={enabled}
+          disabled={saving}
+          onChange={(event) => void setEnabled(event.target.checked)}
+        />
+      </label>
+
+      <div className="mt-4 rounded-2xl bg-violet-50/80 p-4 ring-1 ring-violet-100">
         <p className="text-xs font-semibold uppercase tracking-wide text-personal">
           {t("channelLabel")}
         </p>
-        <label className="mt-3 flex items-start gap-3 text-sm text-ink">
+        <label className="mt-3 flex min-h-11 items-start gap-3 text-sm text-ink">
           <input
             type="checkbox"
-            className="mt-1"
-            checked={Boolean(line?.reminderOptIn) || usesLine}
-            disabled={Boolean(saving) || demoMode || !lineReady}
-            onChange={(event) => void toggleLineMethod(event.target.checked)}
+            className="mt-1 h-5 w-5"
+            checked={Boolean(line?.reminderOptIn)}
+            disabled={Boolean(saving) || demoMode || !lineReady || !enabled}
+            onChange={(event) => void toggleLine(event.target.checked)}
           />
           <span>
             <span className="font-semibold">{t("lineReminder")}</span>
@@ -172,110 +134,28 @@ export function ReminderSettingsCard({
         ) : !line.linked ? (
           <a
             href={`/api/line/start?intent=link&locale=${locale}&next=/settings`}
-            className="mt-3 inline-flex rounded-full bg-[#06C755] px-4 py-2 text-sm font-semibold text-white"
+            className="mt-3 inline-flex min-h-11 items-center rounded-full bg-[#06C755] px-4 py-2 text-sm font-semibold text-white"
           >
             {t("lineConnect")}
           </a>
         ) : !line.reachable && line.addFriendUrl ? (
           <a
             href={line.addFriendUrl}
-            className="mt-3 inline-flex rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white"
+            className="mt-3 inline-flex min-h-11 items-center rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white"
           >
             {t("lineAddFriend")}
           </a>
         ) : null}
       </div>
 
-      <p className="mt-6 text-xs font-semibold uppercase tracking-wide text-personal">
-        {t("whenLabel")}
-      </p>
-      <div className="mt-3 grid gap-3">
-        {CADENCES.map((cadence) => {
-          const pref = source.find((item) => item.cadence === cadence)!;
-          const time = `${String(pref.hour).padStart(2, "0")}:${String(pref.minute).padStart(2, "0")}`;
-          return (
-            <div key={cadence} className="rounded-2xl bg-slate-50 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="font-semibold">{tr(`cadence.${cadence}`)}</p>
-                  <p className="mt-0.5 text-xs text-muted">{t(`cadenceHint.${cadence}`)}</p>
-                </div>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={pref.enabled}
-                    onChange={(event) => void save({ ...pref, enabled: event.target.checked })}
-                  />
-                  {t("enabled")}
-                </label>
-              </div>
-              <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
-                <label className="flex items-center gap-2">
-                  <span className="text-muted">{t("timeLabel")}</span>
-                  <input
-                    type="time"
-                    value={time}
-                    disabled={!pref.enabled}
-                    onChange={(event) => {
-                      const [hour, minute] = event.target.value.split(":").map(Number);
-                      void save({ ...pref, hour, minute });
-                    }}
-                    className="rounded-full bg-white px-3 py-1 ring-1 ring-slate-200"
-                  />
-                </label>
-                {cadence === "WEEKLY" ? (
-                  <select
-                    value={pref.weekday ?? 0}
-                    disabled={!pref.enabled}
-                    onChange={(event) =>
-                      void save({ ...pref, weekday: Number(event.target.value) })
-                    }
-                    className="rounded-full bg-white px-3 py-1 ring-1 ring-slate-200"
-                  >
-                    {[0, 1, 2, 3, 4, 5, 6].map((day) => (
-                      <option key={day} value={day}>
-                        {t(`weekdays.${day}`)}
-                      </option>
-                    ))}
-                  </select>
-                ) : null}
-                <label className="flex items-center gap-2">
-                  <span className="text-muted">{t("channelLabel")}</span>
-                  <select
-                    value={pref.channel}
-                    disabled={!pref.enabled}
-                    onChange={(event) =>
-                      void setChannel(pref, event.target.value as ChannelId)
-                    }
-                    className="rounded-full bg-white px-3 py-1 ring-1 ring-slate-200"
-                  >
-                    {CHANNELS.map((channel) => (
-                      <option
-                        key={channel}
-                        value={channel}
-                        disabled={channel === "LINE" && !lineReady}
-                      >
-                        {t(`channel${channel === "IN_APP" ? "InApp" : channel === "BROWSER" ? "Browser" : "Line"}`)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {pref.channel === "BROWSER" && pref.enabled ? (
-                  <button
-                    type="button"
-                    onClick={() => void enableBrowser(pref)}
-                    className="rounded-full bg-brand px-3 py-1 font-semibold text-white"
-                  >
-                    {t("enableNotify")}
-                  </button>
-                ) : null}
-                {saving === cadence ? (
-                  <span className="text-muted">{t("saving")}</span>
-                ) : null}
-              </div>
-            </div>
-          );
-        })}
+      <div className="mt-5 text-sm text-muted">
+        <p className="text-xs font-semibold uppercase tracking-wide text-personal">{t("whenLabel")}</p>
+        <p className="mt-2 font-semibold text-ink">{t("scheduleHeavyTitle")}</p>
+        <p className="mt-1">{t("scheduleHeavyBody")}</p>
+        <p className="mt-3 font-semibold text-ink">{t("scheduleLightTitle")}</p>
+        <p className="mt-1">{t("scheduleLightBody")}</p>
+        <p className="mt-3 font-semibold text-ink">{t("scheduleCycleTitle")}</p>
+        <p className="mt-1">{t("scheduleCycleBody")}</p>
       </div>
       {notice ? <p className="mt-3 text-sm text-muted">{notice}</p> : null}
     </section>

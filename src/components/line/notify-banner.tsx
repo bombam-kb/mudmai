@@ -24,9 +24,9 @@ export function LineNotifyBanner({
   if (line.linked && line.reachable) return null;
 
   return (
-    <section className="rounded-[2rem] bg-[#06C755] p-5 text-white shadow-card">
+    <section className="jr-banner rounded-[2rem] bg-[#06C755] p-5 text-white shadow-card">
       <h2 className="font-display text-2xl">{t("lineNotifyTitle")}</h2>
-      <p className="mt-1 text-sm text-white/90">{t("lineNotifyBody")}</p>
+      <p className="jr-banner-lede mt-1 text-sm text-white/90">{t("lineNotifyBody")}</p>
       {!line.linked ? (
         <a
           href={`/api/line/start?intent=link&locale=${locale}&next=/home`}

@@ -14,12 +14,12 @@ export function PillarHighlight({ ratings }: Props) {
   const locale = useLocale();
 
   return (
-    <section id="pillars" className="scroll-mt-24">
-      <p className="text-sm font-semibold uppercase tracking-wide text-personal">
+    <section id="pillars" className="jr-pillar-highlight scroll-mt-24">
+      <p className="jr-pillar-eyebrow text-sm font-semibold uppercase tracking-wide text-personal">
         {t("highlightEyebrow")}
       </p>
       <h2 className="mt-2 font-display text-4xl">{t("highlightTitle")}</h2>
-      <p className="mt-3 max-w-2xl text-muted">{t("highlightBody")}</p>
+      <p className="jr-pillar-lede mt-3 max-w-2xl text-muted">{t("highlightBody")}</p>
       <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {PILLARS.map((pillar) => {
           const score = ratings?.[pillar.id];
@@ -36,10 +36,10 @@ export function PillarHighlight({ ratings }: Props) {
                 <PillarIcon id={pillar.id} size={22} />
               </span>
               <p className="mt-3 font-display text-xl text-ink">{t(pillar.id)}</p>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+              <p className="jr-pillar-en text-xs font-semibold uppercase tracking-wide text-muted">
                 {locale === "th" ? pillar.labelEn : pillar.labelTh}
               </p>
-              <p className="mt-2 text-sm text-muted">{t(`blurb.${pillar.id}`)}</p>
+              <p className="jr-pillar-blurb mt-2 text-sm text-muted">{t(`blurb.${pillar.id}`)}</p>
               {typeof score === "number" && score > 0 ? (
                 <ScoreBar value={score} color={pillar.color} />
               ) : null}

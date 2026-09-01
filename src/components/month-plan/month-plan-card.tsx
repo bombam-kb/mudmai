@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import { useTranslations } from "next-intl";
 import { type PillarId } from "@/lib/pillars";
 import { PillarPicker } from "@/components/pillar-picker";
+import { PlusIcon, TrashIcon } from "@/components/icons";
 import { MobileFold } from "@/components/mobile-fold";
 import { MonthPillarCoverage } from "@/components/month-plan/pillar-coverage";
 import {
@@ -512,9 +513,16 @@ export function MonthPlanCard({
             <button
               type="submit"
               disabled={!draft.trim() || plan.goals.length >= MONTH_GOAL_MAX || adding}
-              className="jr-composer-submit rounded-full bg-brand px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+              aria-label={adding ? t("saving") : t("add")}
+              title={adding ? t("saving") : t("add")}
+              className="jr-composer-submit inline-flex items-center justify-center gap-1.5 rounded-full bg-brand px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
             >
-              {adding ? t("saving") : t("add")}
+              {adding ? (
+                <span className="todo-check-spin" />
+              ) : (
+                <PlusIcon size={16} />
+              )}
+              <span className="jr-btn-label">{adding ? t("saving") : t("add")}</span>
             </button>
           </form>
           {movingId && canMove && !dragging ? (
@@ -625,9 +633,12 @@ export function MonthPlanCard({
                           type="button"
                           onClick={() => void removeGoal(goal.id)}
                           disabled={pending}
-                          className="text-xs font-semibold text-muted hover:text-red-600 disabled:opacity-40"
+                          aria-label={t("remove")}
+                          title={t("remove")}
+                          className="jr-icon-btn text-muted hover:bg-rose-50 hover:text-red-600 disabled:opacity-40"
                         >
-                          {t("remove")}
+                          <TrashIcon size={15} />
+                          <span className="jr-btn-label">{t("remove")}</span>
                         </button>
                       </div>
                     </div>

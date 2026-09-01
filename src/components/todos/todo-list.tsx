@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { useTranslations } from "next-intl";
 import { type PillarId } from "@/lib/pillars";
-import { PencilIcon } from "@/components/icons";
+import { PencilIcon, PlusIcon, PostponeIcon, TrashIcon } from "@/components/icons";
+import { GoalPicker } from "@/components/goal-picker";
 import { PillarPicker } from "@/components/pillar-picker";
 import {
   copyTodoToDate,
@@ -307,11 +308,31 @@ export function TodoList({
         </div>
       ) : null}
 
-      <p className={`mb-2 text-xs font-semibold ${todoQuotaFull ? "text-personal" : "text-muted"}`}>
-        {todoQuotaFull
-          ? t("quotaFull", { limit: PLAN.free.todosPerDay })
-          : t("quotaHint", { used: todoQuotaUsed, limit: PLAN.free.todosPerDay })}
-      </p>
+      <div className="jr-quota mb-3">
+        <div
+          className="jr-quota-track"
+          aria-hidden
+        >
+          <div
+            className={`jr-quota-fill ${todoQuotaFull ? "jr-quota-full-bar" : ""}`}
+            style={{
+              width: `${Math.min(100, (todoQuotaUsed / PLAN.free.todosPerDay) * 100)}%`,
+            }}
+          />
+        </div>
+        <p
+          className={`jr-quota-copy text-xs font-semibold ${todoQuotaFull ? "text-personal" : "text-muted"}`}
+        >
+          <span className="jr-quota-long">
+            {todoQuotaFull
+              ? t("quotaFull", { limit: PLAN.free.todosPerDay })
+              : t("quotaHint", { used: todoQuotaUsed, limit: PLAN.free.todosPerDay })}
+          </span>
+          <span className="jr-quota-short" title={t("quotaHint", { used: todoQuotaUsed, limit: PLAN.free.todosPerDay })}>
+            {t("quotaShort", { used: todoQuotaUsed, limit: PLAN.free.todosPerDay })}
+          </span>
+        </p>
+      </div>
 
       <form
         className="jr-composer mb-4"
@@ -338,34 +359,27 @@ export function TodoList({
             if (pillar) setDraftPillar(pillar);
           }}
         />
-        <select
+        <GoalPicker
           value={goalId}
-          onChange={(event) => {
-            const next = event.target.value;
+          goals={goals}
+          size={featured ? "featured" : "field"}
+          onChange={(next) => {
             setGoalId(next);
             const linked = goals.find((goal) => goal.id === next);
             if (linked) setDraftPillar(linked.pillar);
           }}
-          className={`jr-composer-extra rounded-2xl border border-slate-200 bg-white px-3 text-sm text-muted ${
-            featured ? "py-3.5" : "py-2.5"
-          }`}
-          aria-label={t("linkGoal")}
-        >
-          <option value="">{t("linkGoal")}</option>
-          {goals.map((goal) => (
-            <option key={goal.id} value={goal.id}>
-              {goal.title}
-            </option>
-          ))}
-        </select>
+        />
         <button
           type="submit"
           disabled={!title.trim() || todoQuotaFull}
-          className={`jr-composer-submit rounded-full bg-brand text-sm font-semibold text-white disabled:opacity-50 ${
+          aria-label={t("add")}
+          title={t("add")}
+          className={`jr-composer-submit inline-flex items-center justify-center gap-1.5 rounded-full bg-brand text-sm font-semibold text-white disabled:opacity-50 ${
             featured ? "px-5 py-3.5" : "px-4 py-2.5"
           }`}
         >
-          {t("add")}
+          <PlusIcon size={featured ? 18 : 16} />
+          <span className="jr-btn-label">{t("add")}</span>
         </button>
       </form>
 
@@ -561,7 +575,7 @@ function TodoRow({
           type="button"
           onClick={onToggle}
           disabled={pending || editing}
-          className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 ${
+          className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 ${
             pending
               ? "border-brand text-brand"
               : todo.isCompleted
@@ -579,7 +593,7 @@ function TodoRow({
             ""
           )}
         </button>
-        <div className="min-w-0 flex-1">
+        <div className="todo-row-body">
           {editing ? (
             <input
               ref={titleRef}
@@ -599,12 +613,12 @@ function TodoRow({
                   cancelEdit();
                 }
               }}
-              className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1 text-sm font-semibold text-ink outline-none ring-brand/30 focus:ring-2"
+              className="todo-row-head w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1 text-sm font-semibold text-ink outline-none ring-brand/30 focus:ring-2"
             />
           ) : (
-            <div className="flex min-h-6 items-center gap-1.5">
+            <div className="todo-row-head">
               <p
-                className={`min-w-0 text-sm font-semibold leading-6 ${
+                className={`min-w-0 flex-1 text-sm font-semibold leading-6 ${
                   todo.isCompleted ? "text-muted line-through" : "text-ink"
                 }`}
               >
@@ -631,51 +645,76 @@ function TodoRow({
               ) : null}
             </div>
           )}
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            {todo.goalId || todo.goalTitle ? (
-              !compact ? (
-                <select
-                  value={todo.goalId ?? ""}
-                  onChange={(event) => onGoal(event.target.value || null)}
-                  className="max-w-[14rem] rounded-full bg-white px-2 py-0.5 text-xs text-muted ring-1 ring-slate-200"
-                >
-                  <option value="">{t("unlink")}</option>
-                  {goals.map((goal) => (
-                    <option key={goal.id} value={goal.id}>
-                      {goal.title}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <span className="truncate text-xs text-muted">{todo.goalTitle}</span>
-              )
-            ) : null}
-            {todo.carriedFromDate ? (
-              <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-personal ring-1 ring-violet-100">
-                {t("carriedFrom", { date: todo.carriedFromDate })}
-              </span>
-            ) : null}
+          {todo.goalId || todo.goalTitle || todo.carriedFromDate ? (
+            <div className="todo-row-chips">
+              {todo.goalId || todo.goalTitle ? (
+                !compact ? (
+                  <select
+                    value={todo.goalId ?? ""}
+                    onChange={(event) => onGoal(event.target.value || null)}
+                    className="max-w-[14rem] rounded-full bg-white px-2 py-0.5 text-xs text-muted ring-1 ring-slate-200"
+                  >
+                    <option value="">{t("unlink")}</option>
+                    {goals.map((goal) => (
+                      <option key={goal.id} value={goal.id}>
+                        {goal.title}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="truncate text-xs text-muted">{todo.goalTitle}</span>
+                )
+              ) : null}
+              {todo.carriedFromDate ? (
+                <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-personal ring-1 ring-violet-100">
+                  {t("carriedFrom", { date: todo.carriedFromDate })}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
+          <div className="todo-row-bar">
+            {!todo.isCompleted && compact && !confirmDelete ? (
+              <button
+                type="button"
+                onClick={() => setOpen((current) => !current)}
+                disabled={pending}
+                aria-expanded={showPanel}
+                aria-label={t("markIncomplete")}
+                title={t("markIncomplete")}
+                className={`todo-postpone-btn jr-icon-btn ${
+                  showPanel ? "bg-violet-50 text-brand" : "text-brand hover:bg-violet-50"
+                } disabled:opacity-40`}
+              >
+                <PostponeIcon size={16} />
+                <span className="jr-btn-label">{t("markIncomplete")}</span>
+              </button>
+            ) : (
+              <span className="todo-postpone-btn" aria-hidden />
+            )}
+            <div className="todo-row-actions">
+              <PillarPicker
+                value={todo.pillar}
+                disabled={pending || editing}
+                allowEmpty={false}
+                onChange={(pillar) => onPillar(pillar ?? "PERSONAL")}
+              />
+              <span className="h-5 w-px shrink-0 bg-slate-200" aria-hidden />
+              <button
+                type="button"
+                onClick={() => {
+                  cancelEdit();
+                  setConfirmDelete(true);
+                }}
+                disabled={pending}
+                aria-label={t("delete")}
+                title={t("delete")}
+                className="jr-icon-btn text-muted hover:bg-rose-50 hover:text-red-600 disabled:opacity-40"
+              >
+                <TrashIcon size={15} />
+                <span className="jr-btn-label">{t("delete")}</span>
+              </button>
+            </div>
           </div>
-        </div>
-        <div className="todo-row-actions">
-          <PillarPicker
-            value={todo.pillar}
-            disabled={pending || editing}
-            allowEmpty={false}
-            onChange={(pillar) => onPillar(pillar ?? "PERSONAL")}
-          />
-          <span className="h-5 w-px shrink-0 bg-slate-200" aria-hidden />
-          <button
-            type="button"
-            onClick={() => {
-              cancelEdit();
-              setConfirmDelete(true);
-            }}
-            disabled={pending}
-            className="text-xs font-semibold text-muted hover:text-red-600 disabled:opacity-40"
-          >
-            {t("delete")}
-          </button>
         </div>
       </div>
       {confirmDelete ? (
@@ -707,15 +746,6 @@ function TodoRow({
           </span>
           {t("checkHint")}
         </p>
-      ) : null}
-      {!todo.isCompleted && compact && !showPanel ? (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="relative z-10 mt-2 ml-9 text-xs font-semibold text-brand"
-        >
-          {t("markIncomplete")}
-        </button>
       ) : null}
       {showPanel && !confirmDelete ? (
         <div className="relative z-10">
@@ -753,15 +783,16 @@ function IncompletePanel({
   }
 
   return (
-    <div className={`mt-3 space-y-2 ${compact ? "pl-9" : "pl-9"}`}>
+      <div className={`mt-3 space-y-2 ${compact ? "pl-9" : "pl-9"}`}>
       <label className="block">
-        <span className="text-xs font-semibold text-muted">{t("incompleteReason")}</span>
+        <span className="jr-btn-label text-xs font-semibold text-muted">{t("incompleteReason")}</span>
         <textarea
           value={reason}
           onChange={(event) => setReason(event.target.value)}
           onBlur={saveReason}
           rows={compact ? 2 : 3}
           maxLength={400}
+          aria-label={t("incompleteReason")}
           placeholder={t("incompleteReasonHint")}
           className="mt-1 w-full rounded-2xl border border-amber-100 bg-white px-3 py-2 text-sm outline-none ring-brand/30 placeholder:text-slate-400 focus:ring-2"
         />
@@ -771,30 +802,34 @@ function IncompletePanel({
           {t("postponedTo", { dates: todo.postponedToDates.join(", ") })}
         </p>
       ) : (
-        <p className="text-xs text-muted">{t("keepLogHint")}</p>
+        <p className="jr-keep-log text-xs text-muted">{t("keepLogHint")}</p>
       )}
-      <div className="flex flex-wrap items-end gap-2">
-        <label className="text-xs font-semibold text-muted">
-          {t("postponeDate")}
+      <div className="jr-postpone-row flex flex-wrap items-end gap-2">
+        <label className="jr-postpone-date min-w-0 flex-1 text-xs font-semibold text-muted">
+          <span className="jr-btn-label">{t("postponeDate")}</span>
           <input
             type="date"
             value={date}
             onChange={(event) => setDate(event.target.value)}
-            className="mt-1 block rounded-full bg-white px-3 py-1.5 text-sm font-medium text-ink ring-1 ring-slate-200"
+            aria-label={t("postponeDate")}
+            className="mt-1 block w-full rounded-full bg-white px-3 py-1.5 text-sm font-medium text-ink ring-1 ring-slate-200"
           />
         </label>
         <button
           type="button"
           disabled={busy || !isYmd(date) || date === todo.date}
+          aria-label={t("postpone")}
+          title={t("postpone")}
           onClick={() => {
             setBusy(true);
             onPostpone(reason, [date]);
             setDate(defaultPostponeDate(todo.date));
             window.setTimeout(() => setBusy(false), 400);
           }}
-          className="rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+          className="jr-postpone-submit inline-flex items-center justify-center gap-1.5 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
         >
-          {t("postpone")}
+          <PostponeIcon size={15} />
+          <span className="jr-btn-label">{t("postpone")}</span>
         </button>
       </div>
     </div>

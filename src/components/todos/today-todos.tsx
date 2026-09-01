@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { TodoList } from "@/components/todos/todo-list";
 import { TodayMood } from "@/components/mood/today-mood";
+import { ListIcon } from "@/components/icons";
 import type { GoalOption, TodoDto } from "@/lib/todos/schema";
 import type { MoodLevel } from "@/lib/mood/schema";
 import { activeCalendarYear, localYmd } from "@/lib/year";
@@ -52,10 +53,10 @@ export function TodayTodos({
   ).length;
 
   return (
-    <div>
-      <section className="rounded-[2rem] bg-gradient-to-br from-violet-600 via-brand to-cyan-500 p-[3px] shadow-card">
-        <div className="jr-today-panel rounded-[1.85rem] p-5 sm:p-6">
-          <p className="text-sm font-semibold uppercase tracking-wide text-personal">
+    <div className="min-w-0">
+      <section className="jr-today-frame min-w-0 overflow-hidden rounded-[2rem] bg-gradient-to-br from-violet-600 via-brand to-cyan-500 p-[3px] shadow-card">
+        <div className="jr-today-panel min-w-0 rounded-[1.85rem] p-5 sm:p-6">
+          <p className="jr-today-eyebrow text-sm font-semibold uppercase tracking-wide text-personal">
             {th("todayEyebrow")}
           </p>
           <div className="jr-today-head mb-2 mt-1 flex items-center justify-between gap-3">
@@ -66,7 +67,7 @@ export function TodayTodos({
               initialLevel={initialMood}
             />
           </div>
-          <p className="mb-4 text-sm text-muted">
+          <p className="jr-today-invite mb-4 text-sm text-muted">
             {openToday > 0 ? th("todayKeepGoing") : th("todayInvite")}
           </p>
           <TodoList
@@ -80,22 +81,19 @@ export function TodayTodos({
             placeholder={th("todayPlaceholder")}
             onTodosChange={demoMode ? undefined : setLiveTodos}
           />
+          <div className="jr-today-links mt-4 flex flex-wrap gap-2">
+            <Link
+              href="/todos"
+              title={t("openAll")}
+              aria-label={t("openAll")}
+              className="jr-icon-link inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-sm font-semibold text-ink ring-1 ring-slate-200"
+            >
+              <ListIcon size={16} />
+              <span className="jr-btn-label">{t("openAll")}</span>
+            </Link>
+          </div>
         </div>
       </section>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Link
-          href="/todos"
-          className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-ink ring-1 ring-slate-200"
-        >
-          {t("openAll")}
-        </Link>
-        <Link
-          href="/calendar"
-          className="rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white"
-        >
-          {t("openCalendar")}
-        </Link>
-      </div>
     </div>
   );
 }

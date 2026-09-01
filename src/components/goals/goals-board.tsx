@@ -15,6 +15,7 @@ import { useGoalsStore } from "@/stores/goals-store";
 import { signOutClient } from "@/lib/auth/sign-out-client";
 import { useRouter } from "@/i18n/navigation";
 import { MonthPlanCard } from "@/components/month-plan/month-plan-card";
+import { VisionEntry } from "@/components/vision/vision-entry";
 
 type Props = {
   name: string;
@@ -74,7 +75,7 @@ export function GoalsBoard({
   return (
     <AppShell name={name} onSignOut={signOut}>
       <div className="jr-page-head mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <p className="text-sm font-semibold uppercase tracking-wide text-personal">
             {t("eyebrow", { year })}
           </p>
@@ -82,7 +83,7 @@ export function GoalsBoard({
         </div>
         <Link
           href={`/goals/new?quarter=${quarter || currentQuarter()}`}
-          className="rounded-full bg-brand px-5 py-2.5 font-semibold text-white shadow-card"
+          className="jr-page-cta rounded-full bg-brand px-5 py-2.5 font-semibold text-white shadow-card"
         >
           {t("create")}
         </Link>
@@ -94,7 +95,9 @@ export function GoalsBoard({
         </p>
       ) : null}
 
-      <div className="mb-6">
+      <VisionEntry />
+
+      <div className="jr-desktop-only mb-6">
         <MonthPlanCard
           year={year}
           month={planMonth}
@@ -105,7 +108,7 @@ export function GoalsBoard({
 
       <p className="mb-3 text-sm text-muted">{t("quarterHint")}</p>
 
-      <div className="jr-chip-rail mb-4">
+      <div className="jr-chip-wrap mb-4">
         <button
           type="button"
           onClick={() => setQuarter(0)}
@@ -128,7 +131,7 @@ export function GoalsBoard({
           </button>
         ))}
       </div>
-      <div className="jr-chip-rail mb-6">
+      <div className="jr-chip-wrap jr-pillar-chips mb-6">
         <button
           type="button"
           onClick={() => setPillar("ALL")}
@@ -143,6 +146,8 @@ export function GoalsBoard({
             key={item.id}
             type="button"
             onClick={() => setPillar(item.id)}
+            aria-label={tp(item.id)}
+            title={tp(item.id)}
             className="rounded-full px-3 py-1 text-sm font-semibold text-white"
             style={{
               backgroundColor: item.color,
@@ -150,7 +155,8 @@ export function GoalsBoard({
             }}
           >
             <span className="inline-flex items-center gap-1">
-              <PillarIcon id={item.id} size={14} /> {tp(item.id)}
+              <PillarIcon id={item.id} size={14} />
+              <span className="jr-chip-text">{tp(item.id)}</span>
             </span>
           </button>
         ))}

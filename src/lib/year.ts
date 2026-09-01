@@ -90,6 +90,15 @@ function ymdOf(year: number, month: number, day: number) {
   return `${year}-${pad2(month)}-${pad2(day)}`;
 }
 
+export function weekdayKey(ymd: string) {
+  const keys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+  return keys[new Date(`${ymd}T00:00:00.000Z`).getUTCDay()];
+}
+
+/** Days 1…n of the month only (no leading/trailing grid padding). */
+export function monthDayList(year: number, month: number): CalendarCell[] {
+  return monthCells(year, month).filter((cell) => cell.inMonth);
+}
 /** Monday-first 6-row month grid (42 cells). month is 1–12. UTC date-only. */
 export function monthCells(year: number, month: number): CalendarCell[] {
   const firstUtc = new Date(Date.UTC(year, month - 1, 1));
@@ -121,6 +130,25 @@ export function monthCells(year: number, month: number): CalendarCell[] {
 export function addDaysYmd(ymd: string, days: number) {
   const [year, month, day] = ymd.split("-").map(Number);
   return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}
+
+/** Monday–Sunday week for a YYYY-MM-DD civil date (UTC date-only). */
+export function mondayWeekBounds(ymd: string) {
+  const [year, month, day] = ymd.split("-").map(Number);
+  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  const offset = weekday === 0 ? -6 : 1 - weekday;
+  const start = addDaysYmd(ymd, offset);
+  return { start, end: addDaysYmd(start, 6) };
+}
+
+export function shiftYearMonth(year: number, month: number, delta: number) {
+  const index = year * 12 + (month - 1) + delta;
+  return { year: Math.floor(index / 12), month: (index % 12) + 1 };
+}
+
+export function shiftYearQuarter(year: number, quarter: number, delta: number) {
+  const index = year * 4 + (quarter - 1) + delta;
+  return { year: Math.floor(index / 4), quarter: (index % 4) + 1 };
 }
 
 export function calendarParts(now = new Date()) {

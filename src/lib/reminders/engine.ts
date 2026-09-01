@@ -1,58 +1,58 @@
-import type { ReminderPrefDto, CadenceId } from "@/lib/reminders/schema";
+import { bangkokClock } from "@/lib/year";
 import {
-  bangkokClock,
-  calendarParts,
-  isLastWeekOfQuarter,
-  monthBounds,
-} from "@/lib/year";
+  inTimeWindow,
+  isHeavyWeek,
+  isMonthBoundary,
+  isQuarterBoundary,
+  KIND_SLOT,
+  sentKey,
+  type ReminderKind,
+} from "@/lib/reminders/kinds";
 
-export function periodKey(cadence: CadenceId, at: Date | string) {
-  const parts = typeof at === "string" ? calendarParts(new Date(at)) : calendarParts(at);
-  switch (cadence) {
-    case "DAILY":
-      return parts.ymd;
-    case "WEEKLY":
-      return `${parts.year}-${weekStartSunday(parts.ymd)}`;
-    case "MONTHLY":
-      return `${parts.year}-${parts.month}`;
-    case "QUARTERLY":
-      return `${parts.year}-Q${parts.quarter}`;
-  }
-}
+export type ReminderTask = { title: string; date?: string; isCompleted: boolean };
 
-function weekStartSunday(ymd: string) {
-  const [year, month, day] = ymd.split("-").map(Number);
-  const utc = new Date(Date.UTC(year, month - 1, day));
-  utc.setUTCDate(utc.getUTCDate() - utc.getUTCDay());
-  return utc.toISOString().slice(0, 10);
-}
+export type ReminderFacts = {
+  enabled: boolean;
+  weekTodoCount: number;
+  today: ReminderTask[];
+  week: ReminderTask[];
+  monthPlanned: boolean;
+  nextMonthPlanned: boolean;
+  quarterPlanned: boolean;
+  nextQuarterPlanned: boolean;
+  monthlyReviewDone: boolean;
+  quarterlyReviewDone: boolean;
+  sent: Set<string>;
+};
 
-const DAILY_WINDOW_MINUTES = 120;
-
-export function isCadenceDue(pref: ReminderPrefDto, now = new Date()) {
-  if (!pref.enabled) return false;
+export function dueReminderKinds(facts: ReminderFacts, now = new Date()): ReminderKind[] {
+  if (!facts.enabled) return [];
   const clock = bangkokClock(now);
-  const nowMin = clock.hour * 60 + clock.minute;
-  const dueMin = pref.hour * 60 + pref.minute;
-  if (nowMin < dueMin) {
-    return false;
+  const heavy = isHeavyWeek(facts.weekTodoCount);
+  const weekday = clock.weekday;
+  const candidates: ReminderKind[] = [];
+
+  if (heavy) {
+    if (weekday >= 1 && weekday <= 5) candidates.push("DAILY_MORNING", "DAILY_EVENING");
+    if (weekday === 6) candidates.push("SATURDAY_CATCHUP");
+    if (weekday === 0) candidates.push("WEEKLY_SUMMARY");
+  } else {
+    if (weekday === 1) candidates.push("WEEK_START");
+    if (weekday === 5) candidates.push("WEEK_END");
+    if (weekday === 0) candidates.push("WEEKLY_SUMMARY");
   }
-  if (pref.lastSentAt && periodKey(pref.cadence, pref.lastSentAt) === periodKey(pref.cadence, now)) {
-    return false;
-  }
-  const inDailyWindow = nowMin <= dueMin + DAILY_WINDOW_MINUTES;
-  switch (pref.cadence) {
-    case "DAILY":
-      return inDailyWindow;
-    case "WEEKLY":
-      return clock.weekday === (pref.weekday ?? 0) && inDailyWindow;
-    case "MONTHLY":
-      return clock.ymd === monthBounds(clock.year, clock.month).end;
-    case "QUARTERLY":
-      return isLastWeekOfQuarter(clock.ymd);
-  }
+
+  if (isMonthBoundary(now, "start")) candidates.push("MONTH_START");
+  if (isMonthBoundary(now, "end")) candidates.push("MONTH_END");
+  if (isQuarterBoundary(now, "start")) candidates.push("QUARTER_START");
+  if (isQuarterBoundary(now, "end")) candidates.push("QUARTER_END");
+
+  return unique(candidates).filter((kind) => {
+    if (facts.sent.has(sentKey(kind, now))) return false;
+    return inTimeWindow(now, KIND_SLOT[kind]);
+  });
 }
 
-export function dueCadences(prefs: ReminderPrefDto[], now = new Date()) {
-  return prefs.filter((pref) => isCadenceDue(pref, now));
+function unique(kinds: ReminderKind[]) {
+  return [...new Set(kinds)];
 }

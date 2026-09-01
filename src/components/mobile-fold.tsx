@@ -9,6 +9,7 @@ type Props = {
   meta?: ReactNode;
   preview?: ReactNode;
   defaultOpen?: boolean;
+  startCollapsed?: boolean;
   titleClassName?: string;
   children: ReactNode;
 };
@@ -18,20 +19,27 @@ export function MobileFold({
   meta,
   preview,
   defaultOpen = false,
+  startCollapsed = false,
   titleClassName = "font-display text-2xl text-ink",
   children,
 }: Props) {
   const t = useTranslations("ui");
   const layout = useAppearanceStore((state) => state.layout);
-  const [open, setOpen] = useState(defaultOpen || layout !== "mobile");
+  const [open, setOpen] = useState(
+    defaultOpen || (!startCollapsed && layout !== "mobile"),
+  );
 
   useEffect(() => {
     if (defaultOpen) {
       setOpen(true);
       return;
     }
+    if (startCollapsed) {
+      setOpen(false);
+      return;
+    }
     setOpen(layout === "desktop");
-  }, [defaultOpen, layout]);
+  }, [defaultOpen, layout, startCollapsed]);
 
   return (
     <div className={`jr-fold ${open ? "jr-fold-open" : "jr-fold-collapsed"}`}>

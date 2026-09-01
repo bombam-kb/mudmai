@@ -1,5 +1,6 @@
 import type { ReminderCadence, ReminderChannel } from "@prisma/client";
 import { REMINDER_HREF } from "@/lib/reminders/copy";
+import { KIND_HREF, REMINDER_KINDS, type ReminderKind } from "@/lib/reminders/kinds";
 
 export const CADENCES = ["DAILY", "WEEKLY", "MONTHLY", "QUARTERLY"] as const;
 export const CHANNELS = ["IN_APP", "BROWSER", "LINE"] as const;
@@ -20,6 +21,7 @@ export type ReminderPrefDto = {
 export type ReminderLogDto = {
   id: string;
   cadence: CadenceId;
+  kind?: string;
   channel: ChannelId;
   title: string;
   body: string;
@@ -32,7 +34,7 @@ export const DEFAULT_PREFS: ReminderPrefDto[] = [
   {
     cadence: "DAILY",
     enabled: true,
-    hour: 21,
+    hour: 8,
     minute: 0,
     weekday: null,
     channel: "IN_APP",
@@ -66,6 +68,20 @@ export const DEFAULT_PREFS: ReminderPrefDto[] = [
     lastSentAt: null,
   },
 ];
+
+export function notificationsOn(prefs: ReminderPrefDto[]) {
+  return prefs.some((pref) => pref.enabled);
+}
+
+export function parseMasterEnabled(input: unknown):
+  | { ok: true; enabled: boolean }
+  | { ok: false } {
+  if (!input || typeof input !== "object") return { ok: false };
+  const body = input as Record<string, unknown>;
+  if (typeof body.cadence === "string") return { ok: false };
+  if (typeof body.enabled !== "boolean") return { ok: false };
+  return { ok: true, enabled: body.enabled };
+}
 
 export function mergePrefs(rows: ReminderPrefDto[]): ReminderPrefDto[] {
   return DEFAULT_PREFS.map((fallback) => {
@@ -137,6 +153,7 @@ export function toPrefDto(row: {
 export function toLogDto(row: {
   id: string;
   cadence: ReminderCadence;
+  kind?: string | null;
   channel: ReminderChannel;
   title: string;
   body: string;
@@ -146,10 +163,14 @@ export function toLogDto(row: {
   return {
     id: row.id,
     cadence: row.cadence,
+    kind: row.kind ?? row.cadence,
     channel: row.channel,
     title: row.title,
     body: row.body,
-    href: REMINDER_HREF[row.cadence],
+    href:
+      row.kind && REMINDER_KINDS.includes(row.kind as ReminderKind)
+        ? KIND_HREF[row.kind as ReminderKind]
+        : REMINDER_HREF[row.cadence],
     isRead: row.isRead,
     sentAt: row.sentAt.toISOString(),
   };

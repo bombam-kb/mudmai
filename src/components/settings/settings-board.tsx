@@ -8,20 +8,13 @@ import { AppearanceToggles } from "@/components/appearance-toggles";
 import { PillarLegend } from "@/components/pillars/legend";
 import { LineConnectCard, type LineStatusDto } from "@/components/settings/line-connect";
 import { ReminderSettingsCard } from "@/components/settings/reminder-settings";
+import { KnowSection, type JourneyReflection } from "@/components/settings/know-section";
 import { MobileFold } from "@/components/mobile-fold";
-import { calendarParts } from "@/lib/year";
 import { PLAN } from "@/lib/billing/plan";
 import { Link, useRouter } from "@/i18n/navigation";
 import { signOutClient } from "@/lib/auth/sign-out-client";
-import { useRemindersStore } from "@/stores/reminders-store";
 import type { ReminderPrefDto } from "@/lib/reminders/schema";
-import { useReviewsStore } from "@/stores/reviews-store";
-import { useGoalsStore } from "@/stores/goals-store";
-import { useTodosStore } from "@/stores/todos-store";
-import { useOnboardingStore } from "@/stores/onboarding-store";
-import { useNudgeStore } from "@/stores/nudge-store";
-import { useMoodStore } from "@/stores/mood-store";
-import { useMonthPlanStore } from "@/stores/month-plan-store";
+import type { NudgeDto } from "@/lib/nudge/schema";
 
 export type ReferralHistoryEntry = {
   createdAt: string | Date;
@@ -44,6 +37,9 @@ type Props = {
   referral: ReferralSummary | null;
   line: LineStatusDto | null;
   lineError?: string | null;
+  reflection?: JourneyReflection | null;
+  nudges?: NudgeDto[];
+  unreadReminders?: number;
 };
 
 export function SettingsBoard({
@@ -53,13 +49,15 @@ export function SettingsBoard({
   referral,
   line,
   lineError,
+  reflection = null,
+  nudges = [],
+  unreadReminders = 0,
 }: Props) {
   const t = useTranslations("settings");
   const tr = useTranslations("reminders");
   const locale = useLocale();
   const router = useRouter();
   const [lineStatus, setLineStatus] = useState(line);
-  const [notice, setNotice] = useState("");
 
   const [referralState, setReferralState] = useState(referral);
   const [referralNotice, setReferralNotice] = useState("");
@@ -119,65 +117,19 @@ export function SettingsBoard({
     router.refresh();
   }
 
-  async function exportData() {
-    const year = calendarParts().year;
-    if (demoMode) {
-      const blob = new Blob(
-        [
-          JSON.stringify(
-            {
-              exportedAt: new Date().toISOString(),
-              year,
-              demo: true,
-              onboarding: useOnboardingStore.getState(),
-              goals: useGoalsStore.getState().goals,
-              todos: useTodosStore.getState().todos,
-              reviews: useReviewsStore.getState(),
-              reminders: useRemindersStore.getState(),
-              nudges: useNudgeStore.getState().nudges,
-              moods: useMoodStore.getState().moods,
-              monthPlans: useMonthPlanStore.getState().plans,
-            },
-            null,
-            2,
-          ),
-        ],
-        { type: "application/json" },
-      );
-      download(blob, `journey-resolution-${year}.json`);
-      return;
-    }
-    const response = await fetch(`/api/export?year=${year}`);
-    const json = await response.json();
-    download(
-      new Blob([JSON.stringify(json, null, 2)], { type: "application/json" }),
-      `journey-resolution-${year}.json`,
-    );
-  }
-
-  async function deleteAccount() {
-    if (!window.confirm(t("deleteConfirm"))) return;
-    setNotice("");
-    try {
-      if (!demoMode) {
-        const response = await fetch("/api/account", { method: "DELETE" });
-        const json = (await response.json().catch(() => null)) as { ok?: boolean } | null;
-        if (!response.ok || !json?.ok) throw new Error("delete");
-      }
-      await signOutClient();
-      router.replace("/");
-      router.refresh();
-    } catch {
-      setNotice(t("deleteError"));
-    }
-  }
-
   return (
     <AppShell name={name} onSignOut={signOut}>
       <p className="text-sm font-semibold uppercase tracking-wide text-personal">
         {t("eyebrow")}
       </p>
       <h1 className="font-display text-4xl">{t("title")}</h1>
+
+      <KnowSection
+        demoMode={demoMode}
+        reflection={reflection}
+        nudges={nudges}
+        unreadReminders={unreadReminders}
+      />
 
       <section className="mt-6 rounded-3xl bg-white p-6 shadow-card ring-1 ring-slate-100">
         <h2 className="font-display text-2xl">{t("planTitle")}</h2>
@@ -325,19 +277,6 @@ export function SettingsBoard({
       />
 
       <section className="mt-4 rounded-3xl bg-white p-6 shadow-card ring-1 ring-slate-100">
-        <MobileFold title={t("export")} preview={<p className="text-sm text-muted">{t("exportBody")}</p>}>
-        <p className="text-sm text-muted">{t("exportBody")}</p>
-        <button
-          type="button"
-          onClick={() => void exportData()}
-          className="mt-4 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white"
-        >
-          {t("exportCta")}
-        </button>
-        </MobileFold>
-      </section>
-
-      <section className="mt-4 rounded-3xl bg-white p-6 shadow-card ring-1 ring-slate-100">
         <MobileFold title={t("privacy")} preview={<p className="text-sm text-muted">{t("privacyBody")}</p>}>
         <p className="text-sm text-muted">{t("privacyBody")}</p>
         <Link
@@ -348,33 +287,6 @@ export function SettingsBoard({
         </Link>
         </MobileFold>
       </section>
-
-      <section className="mt-4 rounded-3xl bg-white p-6 shadow-card ring-1 ring-slate-100">
-        <MobileFold
-          title={t("delete")}
-          titleClassName="font-display text-2xl text-physical"
-          preview={<p className="text-sm text-muted">{t("deleteBody")}</p>}
-        >
-        <p className="text-sm text-muted">{t("deleteBody")}</p>
-        <button
-          type="button"
-          onClick={() => void deleteAccount()}
-          className="mt-4 rounded-full bg-physical px-4 py-2 text-sm font-semibold text-white"
-        >
-          {t("deleteCta")}
-        </button>
-        {notice ? <p className="mt-3 text-sm text-muted">{notice}</p> : null}
-        </MobileFold>
-      </section>
     </AppShell>
   );
-}
-
-function download(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
 }

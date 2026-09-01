@@ -14,6 +14,7 @@ import { calendarParts } from "@/lib/year";
 import { useReviewsStore } from "@/stores/reviews-store";
 import { PILLARS } from "@/lib/pillars";
 import { PillarIcon } from "@/components/icons";
+import { VisionEntry } from "@/components/vision/vision-entry";
 
 type Props = {
   name: string;
@@ -55,13 +56,13 @@ export function ReviewsHub({
   return (
     <AppShell name={name} onSignOut={signOut}>
       <div className="jr-page-head mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <p className="text-sm font-semibold uppercase tracking-wide text-personal">
             {t("eyebrow", { year })}
           </p>
           <h1 className="font-display text-4xl">{t("title")}</h1>
         </div>
-        <div className="jr-chip-rail">
+        <div className="jr-reviews-cta">
           <Link
             href={`/reviews/monthly?year=${year}&month=${month}`}
             className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white"
@@ -83,6 +84,8 @@ export function ReviewsHub({
         </p>
       ) : null}
 
+      <VisionEntry />
+
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="rounded-3xl bg-white p-6 shadow-card ring-1 ring-slate-100">
           <MobileFold title={t("radarTitle")} preview={<p className="text-sm text-muted">{t("radarHint")}</p>}>
@@ -96,7 +99,7 @@ export function ReviewsHub({
         <section className="rounded-3xl bg-white p-6 shadow-card ring-1 ring-slate-100">
           <MobileFold title={t("yearTitle")} preview={<p className="text-sm text-muted">{t("yearHint")}</p>}>
             <p className="text-sm text-muted">{t("yearHint")}</p>
-            <div className="jr-chip-rail mt-3 text-xs">
+            <div className="jr-pillar-legend mt-3 text-xs">
               {PILLARS.map((pillar) => (
                 <span key={pillar.id} className="inline-flex items-center gap-1">
                   <span
@@ -120,7 +123,7 @@ export function ReviewsHub({
 
       <section className="mt-4 rounded-3xl bg-white p-6 shadow-card ring-1 ring-slate-100">
         <h2 className="font-display text-2xl">{t("monthlyList")}</h2>
-        <div className="jr-rail jr-month-rail mt-3">
+        <div className="jr-month-grid mt-3">
           {Array.from({ length: 12 }, (_, index) => {
             const m = index + 1;
             const review = monthlies.find((item) => item.month === m);
@@ -142,7 +145,7 @@ export function ReviewsHub({
 
       <section className="mt-4 rounded-3xl bg-white p-6 shadow-card ring-1 ring-slate-100">
         <h2 className="font-display text-2xl">{t("quarterlyList")}</h2>
-        <div className="jr-rail jr-month-rail mt-3">
+        <div className="jr-month-grid mt-3">
           {[1, 2, 3, 4].map((q) => {
             const review = quarters.find((item) => item.quarter === q);
             return (

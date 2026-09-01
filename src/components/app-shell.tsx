@@ -6,11 +6,20 @@ import { AppearanceToggles } from "./appearance-toggles";
 import { ReminderWatcher } from "@/components/reminders/watcher";
 import { PdpaBanner } from "@/components/pdpa/banner";
 import { ClientStoreBinder } from "@/components/client-store-binder";
+import { NudgeWatcher } from "@/components/nudge/watcher";
 import { BrandLockup, NavIcon, type NavIconName } from "@/components/icons";
 
-const NAV: { href: string; key: NavIconName }[] = [
+const DESKTOP_NAV: { href: string; key: NavIconName }[] = [
   { href: "/home", key: "home" },
   { href: "/vision", key: "vision" },
+  { href: "/goals", key: "goals" },
+  { href: "/calendar", key: "calendar" },
+  { href: "/reviews", key: "reviews" },
+  { href: "/settings", key: "settings" },
+];
+
+const MOBILE_NAV: { href: string; key: NavIconName }[] = [
+  { href: "/home", key: "home" },
   { href: "/goals", key: "goals" },
   { href: "/calendar", key: "calendar" },
   { href: "/reviews", key: "reviews" },
@@ -48,7 +57,7 @@ export function AppShell({ name, children, onSignOut, variant = "default" }: Pro
             <BrandLockup />
           </Link>
           <nav className="jr-top-nav hidden items-center gap-4 overflow-x-auto text-sm font-medium text-muted">
-            {NAV.map((item) => (
+            {DESKTOP_NAV.map((item) => (
               <Link key={item.key} href={item.href} className="hover:text-ink">
                 {t(`nav.${item.key}`)}
               </Link>
@@ -75,7 +84,7 @@ export function AppShell({ name, children, onSignOut, variant = "default" }: Pro
       </main>
       <nav className="jr-bottom-nav hidden" aria-label={t("nav.tabs")}>
         <div className="jr-tab-row">
-          {NAV.map((item) => {
+          {MOBILE_NAV.map((item) => {
             const active = tabActive(pathname, item.href);
             return (
               <Link
@@ -83,6 +92,7 @@ export function AppShell({ name, children, onSignOut, variant = "default" }: Pro
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 aria-label={t(`nav.${item.key}`)}
+                title={t(`nav.${item.key}`)}
                 className={`jr-tab ${active ? "jr-tab-active" : ""}`}
               >
                 <span className="jr-tab-icon">
@@ -97,6 +107,7 @@ export function AppShell({ name, children, onSignOut, variant = "default" }: Pro
       </nav>
       <PdpaBanner />
       <ReminderWatcher />
+      <NudgeWatcher />
       <ClientStoreBinder />
     </div>
   );
