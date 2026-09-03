@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { Link, usePathname } from "@/i18n/navigation";
+import { usePathname, useRouter } from "@/i18n/navigation";
 import { NavIcon, type NavIconName } from "@/components/icons";
 
 const MOBILE_NAV: { href: string; key: NavIconName }[] = [
@@ -49,40 +49,50 @@ function MobileTab({ href, navKey, label, active, pending, onNavigate }: TabProp
   const showSpinner = pending && !active;
 
   return (
-    <Link
+    <a
       href={href}
       aria-current={active ? "page" : undefined}
       aria-busy={showSpinner || undefined}
       aria-label={label}
       title={label}
       className={`jr-tab ${active ? "jr-tab-active" : ""} ${showSpinner ? "jr-tab-pending" : ""}`}
-      onClick={() => {
-        if (!active) onNavigate(href);
+      onClick={(event) => {
+        if (active) return;
+        event.preventDefault();
+        onNavigate(href);
       }}
     >
       <span className="jr-tab-icon">
         {showSpinner ? <TabSpinner /> : <NavIcon name={navKey} size={20} active={active} />}
       </span>
       <span className="jr-tab-label">{label}</span>
-    </Link>
+    </a>
   );
 }
 
 export function MobileBottomNav() {
   const t = useTranslations();
   const pathname = usePathname();
-  const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const router = useRouter();
+  const [targetHref, setTargetHref] = useState<string | null>(null);
+  const [isNavigating, startNavigation] = useTransition();
 
   useEffect(() => {
-    if (!pendingHref) return;
-    if (tabActive(pathname, pendingHref)) {
-      setPendingHref(null);
+    for (const item of MOBILE_NAV) {
+      router.prefetch(item.href);
     }
-  }, [pathname, pendingHref]);
+  }, [router]);
+
+  useEffect(() => {
+    if (!targetHref) return;
+    if (tabActive(pathname, targetHref)) {
+      setTargetHref(null);
+    }
+  }, [pathname, targetHref]);
 
   useEffect(() => {
     const root = document.documentElement;
-    if (pendingHref) {
+    if (isNavigating || targetHref) {
       root.dataset.navPending = "true";
     } else {
       delete root.dataset.navPending;
@@ -90,14 +100,22 @@ export function MobileBottomNav() {
     return () => {
       delete root.dataset.navPending;
     };
-  }, [pendingHref]);
+  }, [isNavigating, targetHref]);
+
+  function navigate(href: string) {
+    if (tabActive(pathname, href)) return;
+    setTargetHref(href);
+    startNavigation(() => {
+      router.push(href, { scroll: false });
+    });
+  }
 
   return (
     <nav className="jr-bottom-nav hidden" aria-label={t("nav.tabs")}>
       <div className="jr-tab-row">
         {MOBILE_NAV.map((item) => {
           const active = tabActive(pathname, item.href);
-          const pending = pendingHref === item.href;
+          const pending = targetHref === item.href && !active;
           return (
             <MobileTab
               key={item.key}
@@ -106,7 +124,7 @@ export function MobileBottomNav() {
               label={t(`nav.short.${item.key}`)}
               active={active}
               pending={pending}
-              onNavigate={setPendingHref}
+              onNavigate={navigate}
             />
           );
         })}

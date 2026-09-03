@@ -6,7 +6,6 @@ import { DEFAULT_PREFS, mergePrefs, toPrefDto } from "@/lib/reminders/schema";
 import { ensureReferralCode } from "@/lib/referrals/code";
 import { getReferralSummary } from "@/lib/referrals/service";
 import { getLineLinkStatus } from "@/lib/line/account";
-import { refreshLineReachability } from "@/lib/line/reachability";
 import { isLineLoginConfigured, isLineMessagingConfigured } from "@/lib/env";
 import { toNudgeDto } from "@/lib/nudge/schema";
 
@@ -34,8 +33,6 @@ export default async function SettingsPage({ params, searchParams }: Props) {
       />
     );
   }
-
-  await refreshLineReachability(session.user.id).catch(() => null);
 
   const [prefs, referralCode, referralSummary, lineStatus, nudges, unreadReminders] =
     await Promise.all([

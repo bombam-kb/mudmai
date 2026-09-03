@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { mergePrefs, notificationsOn, type ReminderPrefDto } from "@/lib/reminders/schema";
 import { useRemindersStore } from "@/stores/reminders-store";
@@ -42,6 +42,16 @@ export function ReminderSettingsCard({
   }
 
   const statusMessage = lineStatusMessage();
+
+  useEffect(() => {
+    if (demoMode || !line?.linked) return;
+    void fetch("/api/line/account?probe=1")
+      .then((response) => response.json())
+      .then((json: LineStatusDto & { ok?: boolean }) => {
+        if (json.ok) onLineStatus?.(json);
+      })
+      .catch(() => null);
+  }, [demoMode, line?.linked]); // probe once after paint; onLineStatus is stable enough
 
   async function setEnabled(next: boolean) {
     setSaving(true);

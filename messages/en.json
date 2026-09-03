@@ -683,6 +683,8 @@
     "dayEmpty": "—",
     "noTasks": "No tasks this day",
     "openDay": "Open list",
+    "actions": "Task options",
+    "actionsTitle": "What to do with this task",
     "weekdays": {
       "mon": "Mon",
       "tue": "Tue",

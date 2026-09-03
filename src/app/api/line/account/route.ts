@@ -7,20 +7,24 @@ import { refreshLineReachability } from "@/lib/line/reachability";
 import { isLinePlaceholderEmail } from "@/lib/line/oauth";
 import { rateLimitJson } from "@/lib/http/rate-limit";
 
-export async function GET() {
+export async function GET(request: Request) {
   const auth = await requireApiUser({
     allowMissingPdpa: true,
     allowIncompleteOnboarding: true,
   });
   if (!auth.ok) return auth.response;
+
+  const url = new URL(request.url);
+  const probe = url.searchParams.get("probe") === "1";
+
   if (!process.env.DATABASE_URL) {
     return NextResponse.json({ ok: false, reason: "database" }, { status: 503 });
   }
   const status = await getLineLinkStatus(auth.user.id);
-  if (status.linked) {
+  if (status.linked && probe) {
     await refreshLineReachability(auth.user.id).catch(() => null);
   }
-  const fresh = status.linked ? await getLineLinkStatus(auth.user.id) : status;
+  const fresh = status.linked && probe ? await getLineLinkStatus(auth.user.id) : status;
   const messagingConfigured = isLineMessagingConfigured();
   let lineReminderStatus: "ready" | "off" | "unlinked" | "unreachable" | "no_messaging" =
     "unlinked";

@@ -334,6 +334,16 @@ export function ChevronRightIcon({ size = 18, className, title }: IconProps) {
   );
 }
 
+export function MoreIcon({ size = 18, className, title }: IconProps) {
+  return (
+    <Svg size={size} className={className} title={title}>
+      <circle cx="6" cy="12" r="1.35" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.35" fill="currentColor" />
+      <circle cx="18" cy="12" r="1.35" fill="currentColor" />
+    </Svg>
+  );
+}
+
 export function AiLabel({
   children,
   size = 20,
