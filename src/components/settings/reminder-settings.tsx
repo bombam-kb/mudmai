@@ -29,6 +29,19 @@ export function ReminderSettingsCard({
   const source = mergePrefs(demoMode ? storedPrefs : prefs);
   const enabled = notificationsOn(source);
   const lineReady = Boolean(line?.linked && line.messagingConfigured);
+  const lineStatusKey = line?.lineReminderStatus;
+
+  function lineStatusMessage() {
+    if (!enabled) return t("lineReminderNeedsMaster");
+    if (lineStatusKey === "no_messaging") return t("lineChannelUnavailable");
+    if (lineStatusKey === "unlinked") return t("lineConnectFirst");
+    if (lineStatusKey === "unreachable") return t("lineReminderNeedsFriend");
+    if (lineStatusKey === "off") return t("lineReminderOff");
+    if (lineStatusKey === "ready") return t("lineReminderReady");
+    return null;
+  }
+
+  const statusMessage = lineStatusMessage();
 
   async function setEnabled(next: boolean) {
     setSaving(true);
@@ -145,6 +158,15 @@ export function ReminderSettingsCard({
           >
             {t("lineAddFriend")}
           </a>
+        ) : null}
+        {statusMessage ? (
+          <p
+            className={`mt-3 text-sm ${
+              lineStatusKey === "ready" ? "font-semibold text-finance" : "text-muted"
+            }`}
+          >
+            {statusMessage}
+          </p>
         ) : null}
       </div>
 

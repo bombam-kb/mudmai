@@ -1,25 +1,18 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Link, usePathname } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
 import { AppearanceToggles } from "./appearance-toggles";
 import { ReminderWatcher } from "@/components/reminders/watcher";
 import { PdpaBanner } from "@/components/pdpa/banner";
 import { ClientStoreBinder } from "@/components/client-store-binder";
 import { NudgeWatcher } from "@/components/nudge/watcher";
-import { BrandLockup, NavIcon, type NavIconName } from "@/components/icons";
+import { BrandLockup, type NavIconName } from "@/components/icons";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 
 const DESKTOP_NAV: { href: string; key: NavIconName }[] = [
   { href: "/home", key: "home" },
   { href: "/vision", key: "vision" },
-  { href: "/goals", key: "goals" },
-  { href: "/calendar", key: "calendar" },
-  { href: "/reviews", key: "reviews" },
-  { href: "/settings", key: "settings" },
-];
-
-const MOBILE_NAV: { href: string; key: NavIconName }[] = [
-  { href: "/home", key: "home" },
   { href: "/goals", key: "goals" },
   { href: "/calendar", key: "calendar" },
   { href: "/reviews", key: "reviews" },
@@ -33,14 +26,8 @@ type Props = {
   variant?: "default" | "canvas";
 };
 
-function tabActive(pathname: string, href: string) {
-  if (href === "/home") return pathname === "/home" || pathname === "/";
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
-
 export function AppShell({ name, children, onSignOut, variant = "default" }: Props) {
   const t = useTranslations();
-  const pathname = usePathname();
   const canvas = variant === "canvas";
 
   return (
@@ -82,29 +69,7 @@ export function AppShell({ name, children, onSignOut, variant = "default" }: Pro
         ) : null}
         {children}
       </main>
-      <nav className="jr-bottom-nav hidden" aria-label={t("nav.tabs")}>
-        <div className="jr-tab-row">
-          {MOBILE_NAV.map((item) => {
-            const active = tabActive(pathname, item.href);
-            return (
-              <Link
-                key={item.key}
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                aria-label={t(`nav.${item.key}`)}
-                title={t(`nav.${item.key}`)}
-                className={`jr-tab ${active ? "jr-tab-active" : ""}`}
-              >
-                <span className="jr-tab-icon">
-                  <NavIcon name={item.key} size={22} active={active} />
-                </span>
-                <span className="jr-tab-label">{t(`nav.short.${item.key}`)}</span>
-              </Link>
-            );
-          })}
-        </div>
-        <div className="jr-home-indicator" aria-hidden />
-      </nav>
+      <MobileBottomNav />
       <PdpaBanner />
       <ReminderWatcher />
       <NudgeWatcher />

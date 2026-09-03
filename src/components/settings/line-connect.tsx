@@ -12,6 +12,7 @@ export type LineStatusDto = {
   broadcastOptIn: boolean;
   canUnlink: boolean;
   addFriendUrl: string | null;
+  lineReminderStatus?: "ready" | "off" | "unlinked" | "unreachable" | "no_messaging";
 };
 
 export function LineConnectCard({

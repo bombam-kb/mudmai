@@ -1,13 +1,18 @@
 import { bangkokClock } from "@/lib/year";
 import {
-  inTimeWindow,
   isHeavyWeek,
   isMonthBoundary,
   isQuarterBoundary,
   KIND_SLOT,
   sentKey,
+  slotDue,
   type ReminderKind,
 } from "@/lib/reminders/kinds";
+
+export type DueReminderOptions = {
+  /** After the scheduled time, still deliver until end of day (cron / app catch-up). */
+  catchUp?: boolean;
+};
 
 export type ReminderTask = { title: string; date?: string; isCompleted: boolean };
 
@@ -25,8 +30,13 @@ export type ReminderFacts = {
   sent: Set<string>;
 };
 
-export function dueReminderKinds(facts: ReminderFacts, now = new Date()): ReminderKind[] {
+export function dueReminderKinds(
+  facts: ReminderFacts,
+  now = new Date(),
+  options: DueReminderOptions = {},
+): ReminderKind[] {
   if (!facts.enabled) return [];
+  const slotMode = options.catchUp ? "catchUp" : "strict";
   const clock = bangkokClock(now);
   const heavy = isHeavyWeek(facts.weekTodoCount);
   const weekday = clock.weekday;
@@ -49,7 +59,7 @@ export function dueReminderKinds(facts: ReminderFacts, now = new Date()): Remind
 
   return unique(candidates).filter((kind) => {
     if (facts.sent.has(sentKey(kind, now))) return false;
-    return inTimeWindow(now, KIND_SLOT[kind]);
+    return slotDue(now, KIND_SLOT[kind], slotMode);
   });
 }
 

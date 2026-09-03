@@ -3,6 +3,7 @@ import { requireApiUser } from "@/lib/auth/require-api-user";
 import { prisma } from "@/lib/prisma";
 import { isLineLoginConfigured, isLineMessagingConfigured } from "@/lib/env";
 import { getLineLinkStatus, unlinkLineAccount } from "@/lib/line/account";
+import { refreshLineReachability } from "@/lib/line/reachability";
 import { isLinePlaceholderEmail } from "@/lib/line/oauth";
 import { rateLimitJson } from "@/lib/http/rate-limit";
 
@@ -16,14 +17,28 @@ export async function GET() {
     return NextResponse.json({ ok: false, reason: "database" }, { status: 503 });
   }
   const status = await getLineLinkStatus(auth.user.id);
+  if (status.linked) {
+    await refreshLineReachability(auth.user.id).catch(() => null);
+  }
+  const fresh = status.linked ? await getLineLinkStatus(auth.user.id) : status;
+  const messagingConfigured = isLineMessagingConfigured();
+  let lineReminderStatus: "ready" | "off" | "unlinked" | "unreachable" | "no_messaging" =
+    "unlinked";
+  if (!messagingConfigured) lineReminderStatus = "no_messaging";
+  else if (!fresh.linked) lineReminderStatus = "unlinked";
+  else if (!fresh.reminderOptIn) lineReminderStatus = "off";
+  else if (!fresh.reachable) lineReminderStatus = "unreachable";
+  else lineReminderStatus = "ready";
+
   return NextResponse.json({
     ok: true,
     loginConfigured: isLineLoginConfigured(),
-    messagingConfigured: isLineMessagingConfigured(),
+    messagingConfigured,
+    lineReminderStatus,
     addFriendUrl: process.env.NEXT_PUBLIC_LINE_OA_BASIC_ID
       ? `https://line.me/R/ti/p/${process.env.NEXT_PUBLIC_LINE_OA_BASIC_ID}`
       : null,
-    ...status,
+    ...fresh,
   });
 }
 

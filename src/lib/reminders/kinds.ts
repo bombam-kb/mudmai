@@ -64,10 +64,17 @@ export function isHeavyWeek(todoCount: number) {
 }
 
 export function inTimeWindow(now: Date, slot: Slot) {
+  return slotDue(now, slot, "strict");
+}
+
+/** strict = 2h window after slot; catchUp = any time after slot start today. */
+export function slotDue(now: Date, slot: Slot, mode: "strict" | "catchUp" = "strict") {
   const clock = bangkokClock(now);
   const nowMin = clock.hour * 60 + clock.minute;
   const dueMin = slot.hour * 60 + slot.minute;
-  return nowMin >= dueMin && nowMin <= dueMin + slot.window;
+  if (nowMin < dueMin) return false;
+  if (mode === "catchUp") return true;
+  return nowMin <= dueMin + slot.window;
 }
 
 export function kindPeriodKey(kind: ReminderKind, now: Date) {

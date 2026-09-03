@@ -10,7 +10,7 @@ import { digestMessages, withOpenLink } from "@/lib/line/oa-digest";
 import { pushLineText } from "@/lib/line/messaging";
 import { toLogDto } from "@/lib/reminders/schema";
 
-export async function dispatchDueReminders(now = new Date()) {
+export async function dispatchDueReminders(now = new Date(), catchUp = true) {
   if (!process.env.DATABASE_URL) return { sent: 0, skipped: 0 };
 
   const prefs = await prisma.reminderPreference.findMany({
@@ -37,6 +37,7 @@ export async function dispatchDueReminders(now = new Date()) {
       lineReachable: Boolean(row.user.lineAccount?.reachable),
       lineOptIn: Boolean(row.user.lineAccount?.reminderOptIn),
       now,
+      catchUp,
     });
     sent += result.sent;
     skipped += result.skipped;
@@ -52,6 +53,7 @@ export async function dispatchUserReminders(input: {
   lineReachable: boolean;
   lineOptIn?: boolean;
   now?: Date;
+  catchUp?: boolean;
 }) {
   const now = input.now ?? new Date();
   const master = await prisma.reminderPreference.findUnique({
@@ -62,7 +64,7 @@ export async function dispatchUserReminders(input: {
 
   const facts = await loadReminderFacts(input.userId, now);
   facts.enabled = true;
-  const due = dueReminderKinds(facts, now);
+  const due = dueReminderKinds(facts, now, { catchUp: input.catchUp ?? true });
   if (due.length === 0) return { sent: 0, skipped: 1, logs: [] as ReturnType<typeof toLogDto>[] };
 
   const useLine = shouldPushLine({
@@ -91,11 +93,14 @@ export async function dispatchUserReminders(input: {
 
   if (useLine && input.lineUserId && lineMessages.length > 0) {
     const push = await pushLineText(input.lineUserId, lineMessages.slice(0, 5));
-    if (!push.ok && push.unreachable) {
-      await prisma.lineAccount.updateMany({
-        where: { lineUserId: input.lineUserId },
-        data: { reachable: false, unfollowedAt: new Date() },
-      });
+    if (!push.ok) {
+      console.warn("[reminders-line-push]", input.userId, push.status);
+      if (push.unreachable) {
+        await prisma.lineAccount.updateMany({
+          where: { lineUserId: input.lineUserId },
+          data: { reachable: false, unfollowedAt: new Date() },
+        });
+      }
     }
   }
 

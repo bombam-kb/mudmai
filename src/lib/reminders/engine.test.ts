@@ -76,6 +76,18 @@ describe("dueReminderKinds", () => {
     expect(due({ weekTodoCount: 10 }, "2026-09-30", 19)).toEqual(["MONTH_END", "QUARTER_END"]);
   });
 
+  it("catch-up delivers morning reminders after the strict window", () => {
+    expect(
+      dueReminderKinds(facts({ weekTodoCount: 50 }), atBangkok("2026-09-07", 21), { catchUp: true }),
+    ).toEqual(["DAILY_MORNING", "DAILY_EVENING"]);
+  });
+
+  it("catch-up still skips before slot start", () => {
+    expect(
+      dueReminderKinds(facts({ weekTodoCount: 50 }), atBangkok("2026-09-07", 7), { catchUp: true }),
+    ).toEqual([]);
+  });
+
   it("heavy last day of month also keeps the evening task ping", () => {
     expect(due({ weekTodoCount: 50 }, "2026-09-30", 19)).toEqual([
       "DAILY_EVENING",

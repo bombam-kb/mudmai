@@ -62,7 +62,7 @@ export function KnowSection({
     <section className="jr-more-group mt-6 rounded-3xl bg-white shadow-card ring-1 ring-slate-100">
       <p className="jr-more-label">{ts("knowTitle")}</p>
 
-      <Link href="/vision" className="jr-more-row jr-vision-entry">
+      <Link href="/vision" className="jr-more-row jr-vision-entry jr-desktop-only">
         <span className="jr-more-icon bg-brand text-white">
           <NavIcon name="vision" size={16} />
         </span>
@@ -104,7 +104,7 @@ export function KnowSection({
 
       {shown ? (
         <>
-          <div className="jr-more-fold">
+          <div className="jr-more-fold jr-desktop-only">
             <MobileFold
               title={t("healingTitle")}
               titleClassName="text-base font-semibold text-ink"
@@ -117,7 +117,7 @@ export function KnowSection({
               </Link>
             </MobileFold>
           </div>
-          <div className="jr-more-fold">
+          <div className="jr-more-fold jr-desktop-only">
             <MobileFold
               title={t("expectTitle")}
               titleClassName="text-base font-semibold text-ink"

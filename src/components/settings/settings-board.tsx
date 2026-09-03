@@ -238,7 +238,7 @@ export function SettingsBoard({
         </MobileFold>
       </section>
 
-      <section className="mt-6 rounded-3xl bg-white p-6 shadow-card ring-1 ring-slate-100">
+      <section className="jr-desktop-only mt-6 rounded-3xl bg-white p-6 shadow-card ring-1 ring-slate-100">
         <h2 className="font-display text-2xl">{t("appearance")}</h2>
         <p className="mt-1 text-sm text-muted">{t("appearanceBody")}</p>
         <div className="mt-4">
@@ -246,7 +246,7 @@ export function SettingsBoard({
         </div>
       </section>
 
-      <section className="mt-4 rounded-3xl bg-white p-6 shadow-card ring-1 ring-slate-100">
+      <section className="jr-desktop-only mt-4 rounded-3xl bg-white p-6 shadow-card ring-1 ring-slate-100">
         <h2 className="font-display text-2xl">{t("pillarLegend")}</h2>
         <p className="mt-1 text-sm text-muted">{t("pillarLegendBody")}</p>
         <div className="mt-4">
@@ -254,7 +254,7 @@ export function SettingsBoard({
         </div>
       </section>
 
-      <section className="mt-4 rounded-3xl bg-white p-6 shadow-card ring-1 ring-slate-100">
+      <section className="jr-desktop-only mt-4 rounded-3xl bg-white p-6 shadow-card ring-1 ring-slate-100">
         <h2 className="font-display text-2xl">{t("language")}</h2>
         <p className="mt-1 text-sm text-muted">{t("languageBody")}</p>
         <div className="mt-3">
