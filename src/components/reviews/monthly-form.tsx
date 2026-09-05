@@ -6,13 +6,14 @@ import { AppShell } from "@/components/app-shell";
 import { RatingsPicker } from "@/components/reviews/ratings-picker";
 import { Link, useRouter } from "@/i18n/navigation";
 import { signOutClient } from "@/lib/auth/sign-out-client";
-import type { OnboardingRatings } from "@/lib/onboarding/schema";
+import { withDefaultRatings, type OnboardingRatings } from "@/lib/onboarding/schema";
 import type { PillarId } from "@/lib/pillars";
 import {
   emptyMonthly,
   type MonthlyReviewDto,
   type MonthlyReviewInput,
 } from "@/lib/reviews/schema";
+import { ReviewSaveCelebration } from "@/components/reviews/review-save-celebration";
 import { useReviewsStore } from "@/stores/reviews-store";
 import { useNudgeStore } from "@/stores/nudge-store";
 import { useOnboardingStore } from "@/stores/onboarding-store";
@@ -35,6 +36,12 @@ export function MonthlyReviewForm({ name, demoMode, year, month, initial }: Prop
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(false);
+  const [celebrate, setCelebrate] = useState(false);
+
+  function finishCelebration() {
+    router.push("/reviews");
+    router.refresh();
+  }
 
   async function signOut() {
     await signOutClient();
@@ -46,9 +53,10 @@ export function MonthlyReviewForm({ name, demoMode, year, month, initial }: Prop
     setSaving(true);
     setError(false);
     try {
+      const payload = { ...form, ratings: withDefaultRatings(form.ratings) };
       if (demoMode) {
         useReviewsStore.getState().upsertMonthly({
-          ...form,
+          ...payload,
           id: initial?.id ?? crypto.randomUUID(),
         });
         const onboarding = useOnboardingStore.getState();
@@ -59,23 +67,22 @@ export function MonthlyReviewForm({ name, demoMode, year, month, initial }: Prop
             happiestMoment: onboarding.happiestMoment,
             expectationsNextYear: onboarding.expectationsNextYear,
           },
-          monthly: { year: form.year, month: form.month, ratings: form.ratings },
+          monthly: { year: payload.year, month: payload.month, ratings: payload.ratings },
           weekTodos: [],
-          weekFrom: `${form.year}-${String(form.month).padStart(2, "0")}-01`,
-          weekTo: `${form.year}-${String(form.month).padStart(2, "0")}-01`,
+          weekFrom: `${payload.year}-${String(payload.month).padStart(2, "0")}-01`,
+          weekTo: `${payload.year}-${String(payload.month).padStart(2, "0")}-01`,
         });
-        router.push("/reviews");
+        setCelebrate(true);
         return;
       }
       const response = await fetch("/api/reviews/monthly", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       const json = (await response.json()) as { ok: boolean };
       if (!json.ok) throw new Error("save");
-      router.push("/reviews");
-      router.refresh();
+      setCelebrate(true);
     } catch {
       setError(true);
     } finally {
@@ -91,7 +98,11 @@ export function MonthlyReviewForm({ name, demoMode, year, month, initial }: Prop
   }
 
   return (
-    <AppShell name={name} onSignOut={signOut}>
+    <>
+      {celebrate ? (
+        <ReviewSaveCelebration kind="monthly" onDone={finishCelebration} />
+      ) : null}
+      <AppShell name={name} onSignOut={signOut}>
       <Link href="/reviews" className="text-sm font-semibold text-brand">
         ← {t("back")}
       </Link>
@@ -141,5 +152,6 @@ export function MonthlyReviewForm({ name, demoMode, year, month, initial }: Prop
         </button>
       </div>
     </AppShell>
+    </>
   );
 }

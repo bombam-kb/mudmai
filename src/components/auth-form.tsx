@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Link, useRouter } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
 import { isSupabaseConfigured } from "@/lib/env";
 import { createClient } from "@/lib/supabase/client";
 import { AppearanceToggles } from "./appearance-toggles";
@@ -26,7 +26,6 @@ export function AuthForm({
   errorCode?: string | null;
 }) {
   const t = useTranslations("auth");
-  const router = useRouter();
   const checkoutPlan = parseCheckoutPlan(plan);
   const afterAuth = checkoutPlan ? `/pricing?plan=${checkoutPlan}` : null;
   const cleanReferralCode = referralCode?.trim() || null;
@@ -46,6 +45,29 @@ export function AuthForm({
   const [pending, setPending] = useState(false);
   const configured = isSupabaseConfigured();
 
+  function localePath(path: string) {
+    const locale = document.documentElement.lang === "en" ? "en" : "th";
+    const normalized = path.startsWith("/") ? path : `/${path}`;
+    if (normalized.startsWith(`/${locale}/`) || normalized === `/${locale}`) {
+      return normalized;
+    }
+    return `/${locale}${normalized}`;
+  }
+
+  function navigateAfterAuth(path: string) {
+    void fetch("/api/profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        locale: document.documentElement.lang,
+        ...(mode === "signup"
+          ? { pdpaConsent: true, pdpaVersion: PDPA_VERSION }
+          : {}),
+      }),
+    });
+    window.location.assign(localePath(path));
+  }
+
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
@@ -62,6 +84,7 @@ export function AuthForm({
     }
 
     setPending(true);
+    let redirecting = false;
     try {
       const supabase = createClient();
       if (mode === "signup") {
@@ -81,17 +104,8 @@ export function AuthForm({
         });
         if (signUpError) throw signUpError;
         if (data.session) {
-          await fetch("/api/profile", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              locale: document.documentElement.lang,
-              pdpaConsent: true,
-              pdpaVersion: PDPA_VERSION,
-            }),
-          });
-          router.replace(afterAuth ?? "/onboarding");
-          router.refresh();
+          redirecting = true;
+          navigateAfterAuth(afterAuth ?? "/onboarding");
           return;
         }
         setInfo(t("checkEmail"));
@@ -101,18 +115,17 @@ export function AuthForm({
           password,
         });
         if (signInError) throw signInError;
-        await fetch("/api/profile", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ locale: document.documentElement.lang }),
-        });
-        router.replace(afterAuth ?? "/home");
-        router.refresh();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session) throw new Error("no session");
+        redirecting = true;
+        navigateAfterAuth(afterAuth ?? "/home");
       }
     } catch {
       setError("generic");
     } finally {
-      setPending(false);
+      if (!redirecting) setPending(false);
     }
   }
 
@@ -216,7 +229,13 @@ export function AuthForm({
             disabled={pending}
             className="w-full rounded-full bg-brand py-3 font-semibold text-white disabled:opacity-60"
           >
-            {mode === "login" ? t("submitLogin") : t("submitSignup")}
+            {pending
+              ? mode === "login"
+                ? t("signingIn")
+                : t("submitSignup")
+              : mode === "login"
+                ? t("submitLogin")
+                : t("submitSignup")}
           </button>
         </form>
         {lineLoginEnabled ? (
@@ -237,6 +256,7 @@ export function AuthForm({
                   setError("config");
                   return;
                 }
+                setPending(true);
                 const params = new URLSearchParams({
                   intent: "login",
                   locale: document.documentElement.lang === "en" ? "en" : "th",

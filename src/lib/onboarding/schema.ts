@@ -30,6 +30,27 @@ export const EMPTY_RATINGS: OnboardingRatings = {
   PHYSICAL_HEALTH: 0,
 };
 
+/** Neutral default when the user skips pillar sliders in reviews. */
+export const DEFAULT_RATINGS: OnboardingRatings = {
+  CAREER: 3,
+  PERSONAL: 3,
+  FINANCE: 3,
+  RELATIONSHIPS: 3,
+  MENTAL_HEALTH: 3,
+  PHYSICAL_HEALTH: 3,
+};
+
+export function withDefaultRatings(ratings: OnboardingRatings): OnboardingRatings {
+  const next = { ...DEFAULT_RATINGS };
+  for (const pillar of PILLARS) {
+    const value = ratings[pillar.id];
+    if (Number.isInteger(value) && value >= 1 && value <= 5) {
+      next[pillar.id] = value;
+    }
+  }
+  return next;
+}
+
 export const EMPTY_DRAFT: OnboardingDraft = {
   lastYearStory: "",
   happiestMoment: "",

@@ -1,4 +1,4 @@
-import { EMPTY_RATINGS, type OnboardingRatings } from "@/lib/onboarding/schema";
+import { DEFAULT_RATINGS, type OnboardingRatings } from "@/lib/onboarding/schema";
 import { PILLARS, type PillarId } from "@/lib/pillars";
 import type { GoalStatusId } from "@/lib/goals/schema";
 
@@ -73,7 +73,7 @@ export function emptyMonthly(year: number, month: number): MonthlyReviewInput {
     whatILovedMost: "",
     whatToStop: "",
     whatToContinue: "",
-    ratings: { ...EMPTY_RATINGS },
+    ratings: { ...DEFAULT_RATINGS },
   };
 }
 
@@ -83,18 +83,19 @@ export function emptyQuarterly(year: number, quarter: number): QuarterlyReviewIn
     quarter,
     narrative: "",
     nextQuarterPlan: "",
-    ratings: { ...EMPTY_RATINGS },
+    ratings: { ...DEFAULT_RATINGS },
     goalOutcomes: [],
   };
 }
 
-function readRatings(raw: unknown): OnboardingRatings | null {
+function readRatings(raw: unknown): OnboardingRatings {
   const body = (raw ?? {}) as Record<string, unknown>;
-  const ratings = { ...EMPTY_RATINGS };
+  const ratings = { ...DEFAULT_RATINGS };
   for (const pillar of PILLARS) {
     const value = Number(body[pillar.id]);
-    if (!Number.isInteger(value) || value < 1 || value > 5) return null;
-    ratings[pillar.id] = value;
+    if (Number.isInteger(value) && value >= 1 && value <= 5) {
+      ratings[pillar.id] = value;
+    }
   }
   return ratings;
 }
@@ -118,7 +119,6 @@ export function parseMonthlyPayload(input: unknown):
   if (!whatILovedMost || !whatToStop || !whatToContinue) {
     return { ok: false, error: "text" };
   }
-  if (!ratings) return { ok: false, error: "ratings" };
   return {
     ok: true,
     data: { year, month, whatILovedMost, whatToStop, whatToContinue, ratings },
@@ -140,7 +140,6 @@ export function parseQuarterlyPayload(input: unknown):
     return { ok: false, error: "quarter" };
   }
   if (!narrative || !nextQuarterPlan) return { ok: false, error: "text" };
-  if (!ratings) return { ok: false, error: "ratings" };
 
   const rawOutcomes = Array.isArray(body.goalOutcomes) ? body.goalOutcomes : [];
   const goalOutcomes: GoalOutcome[] = rawOutcomes.map((item) => {

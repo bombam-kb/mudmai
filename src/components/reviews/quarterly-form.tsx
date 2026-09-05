@@ -7,7 +7,7 @@ import { RatingsPicker } from "@/components/reviews/ratings-picker";
 import { Link, useRouter } from "@/i18n/navigation";
 import { signOutClient } from "@/lib/auth/sign-out-client";
 import type { GoalDto } from "@/lib/goals/schema";
-import type { OnboardingRatings } from "@/lib/onboarding/schema";
+import { withDefaultRatings, type OnboardingRatings } from "@/lib/onboarding/schema";
 import type { PillarId } from "@/lib/pillars";
 import { PillarIcon } from "@/components/icons";
 import {
@@ -16,6 +16,7 @@ import {
   type QuarterlyReviewDto,
   type QuarterlyReviewInput,
 } from "@/lib/reviews/schema";
+import { ReviewSaveCelebration } from "@/components/reviews/review-save-celebration";
 import { useReviewsStore } from "@/stores/reviews-store";
 import { useGoalsStore } from "@/stores/goals-store";
 
@@ -53,6 +54,12 @@ export function QuarterlyReviewForm({
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(false);
+  const [celebrate, setCelebrate] = useState(false);
+
+  function finishCelebration() {
+    router.push("/reviews");
+    router.refresh();
+  }
 
   async function signOut() {
     await signOutClient();
@@ -66,6 +73,7 @@ export function QuarterlyReviewForm({
     try {
       const payload = {
         ...form,
+        ratings: withDefaultRatings(form.ratings),
         goalOutcomes: mergeOutcomes(form.goalOutcomes, liveGoals),
       };
       if (demoMode) {
@@ -73,7 +81,7 @@ export function QuarterlyReviewForm({
           ...payload,
           id: initial?.id ?? crypto.randomUUID(),
         });
-        router.push("/reviews");
+        setCelebrate(true);
         return;
       }
       const response = await fetch("/api/reviews/quarterly", {
@@ -83,8 +91,7 @@ export function QuarterlyReviewForm({
       });
       const json = (await response.json()) as { ok: boolean };
       if (!json.ok) throw new Error("save");
-      router.push("/reviews");
-      router.refresh();
+      setCelebrate(true);
     } catch {
       setError(true);
     } finally {
@@ -109,7 +116,11 @@ export function QuarterlyReviewForm({
   }
 
   return (
-    <AppShell name={name} onSignOut={signOut}>
+    <>
+      {celebrate ? (
+        <ReviewSaveCelebration kind="quarterly" onDone={finishCelebration} />
+      ) : null}
+      <AppShell name={name} onSignOut={signOut}>
       <Link href="/reviews" className="text-sm font-semibold text-brand">
         ← {t("back")}
       </Link>
@@ -195,6 +206,7 @@ export function QuarterlyReviewForm({
         </button>
       </div>
     </AppShell>
+    </>
   );
 }
 
