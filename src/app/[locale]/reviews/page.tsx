@@ -2,6 +2,8 @@ import { setRequestLocale } from "next-intl/server";
 import { ReviewsHub } from "@/components/reviews/reviews-hub";
 import { requireAppUser } from "@/lib/auth/require-user";
 import { prisma } from "@/lib/prisma";
+import { listMonthPlans } from "@/lib/month-plan/db";
+import { toMonthPlanDto } from "@/lib/month-plan/schema";
 import { ratingsFromDb, toMonthlyDto, toQuarterlyDto } from "@/lib/reviews/schema";
 import { calendarParts } from "@/lib/year";
 
@@ -29,7 +31,7 @@ export default async function ReviewsPage({ params }: Props) {
     );
   }
 
-  const [monthly, quarterly] = await Promise.all([
+  const [monthly, quarterly, monthPlans] = await Promise.all([
     prisma.monthlyReview
       .findMany({
         where: { userId: session.user.id, year },
@@ -42,6 +44,7 @@ export default async function ReviewsPage({ params }: Props) {
         orderBy: { quarter: "asc" },
       })
       .catch(() => []),
+    listMonthPlans(session.user.id, year).catch(() => []),
   ]);
 
   return (
@@ -51,6 +54,7 @@ export default async function ReviewsPage({ params }: Props) {
       year={year}
       monthly={monthly.map(toMonthlyDto)}
       quarterly={quarterly.map(toQuarterlyDto)}
+      monthPlans={monthPlans.map(toMonthPlanDto)}
       baseline={session.reflection ? ratingsFromDb(session.reflection) : null}
     />
   );

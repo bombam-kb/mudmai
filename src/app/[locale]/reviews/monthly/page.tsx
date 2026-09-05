@@ -2,6 +2,8 @@ import { setRequestLocale } from "next-intl/server";
 import { MonthlyReviewForm } from "@/components/reviews/monthly-form";
 import { requireAppUser } from "@/lib/auth/require-user";
 import { prisma } from "@/lib/prisma";
+import { findMonthPlan } from "@/lib/month-plan/db";
+import { emptyMonthPlan, toMonthPlanDto } from "@/lib/month-plan/schema";
 import { toMonthlyDto } from "@/lib/reviews/schema";
 import { calendarParts } from "@/lib/year";
 
@@ -29,15 +31,19 @@ export default async function MonthlyReviewPage({ params, searchParams }: Props)
         year={year}
         month={month}
         initial={null}
+        initialPlan={emptyMonthPlan(year, month)}
       />
     );
   }
 
-  const review = await prisma.monthlyReview
-    .findUnique({
-      where: { userId_year_month: { userId: session.user.id, year, month } },
-    })
-    .catch(() => null);
+  const [review, planRow] = await Promise.all([
+    prisma.monthlyReview
+      .findUnique({
+        where: { userId_year_month: { userId: session.user.id, year, month } },
+      })
+      .catch(() => null),
+    findMonthPlan(session.user.id, year, month).catch(() => null),
+  ]);
 
   return (
     <MonthlyReviewForm
@@ -46,6 +52,7 @@ export default async function MonthlyReviewPage({ params, searchParams }: Props)
       year={year}
       month={month}
       initial={review ? toMonthlyDto(review) : null}
+      initialPlan={planRow ? toMonthPlanDto(planRow) : emptyMonthPlan(year, month)}
     />
   );
 }

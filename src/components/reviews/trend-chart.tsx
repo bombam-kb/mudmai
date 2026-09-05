@@ -1,6 +1,7 @@
 "use client";
 
 import { PILLARS } from "@/lib/pillars";
+import { averageRating } from "@/lib/reviews/analytics";
 import type { MonthlyReviewDto } from "@/lib/reviews/schema";
 
 type Props = {
@@ -63,6 +64,27 @@ export function PillarTrendChart({ year, reviews }: Props) {
             />
           );
         })}
+        {(() => {
+          const coords = Array.from({ length: 12 }, (_, index) => {
+            const month = index + 1;
+            const review = byMonth.get(month);
+            if (!review) return null;
+            return `${x(month)},${y(averageRating(review.ratings))}`;
+          }).filter(Boolean);
+          if (coords.length < 2) return null;
+          return (
+            <polyline
+              points={coords.join(" ")}
+              fill="none"
+              stroke="#7c3aed"
+              strokeWidth="3"
+              strokeDasharray="6 4"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              opacity="0.85"
+            />
+          );
+        })()}
         {PILLARS.map((pillar) =>
           Array.from({ length: 12 }, (_, index) => {
             const month = index + 1;

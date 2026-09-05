@@ -3,6 +3,31 @@ import { PILLAR_MAP, type PillarId } from "@/lib/pillars";
 export const MONTH_GOAL_MAX = 40;
 export const MONTH_GOAL_TITLE_MAX = 120;
 export const MONTH_IMPORTANT_MAX = 2000;
+export const MEMORY_CAPTION_MAX = 200;
+
+export type MemoryImageMeta = {
+  offsetX: number;
+  offsetY: number;
+  scale: number;
+};
+
+export const DEFAULT_MEMORY_META: MemoryImageMeta = {
+  offsetX: 0,
+  offsetY: 0,
+  scale: 1,
+};
+
+function readMemoryMeta(raw: unknown): MemoryImageMeta {
+  const body = (raw ?? {}) as Record<string, unknown>;
+  const offsetX = Number(body.offsetX);
+  const offsetY = Number(body.offsetY);
+  const scale = Number(body.scale);
+  return {
+    offsetX: Number.isFinite(offsetX) ? Math.min(40, Math.max(-40, offsetX)) : 0,
+    offsetY: Number.isFinite(offsetY) ? Math.min(40, Math.max(-40, offsetY)) : 0,
+    scale: Number.isFinite(scale) ? Math.min(2.5, Math.max(1, scale)) : 1,
+  };
+}
 
 const LOOSE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -28,15 +53,35 @@ export type MonthPlanDto = {
   month: number;
   importantNote: string;
   goals: MonthGoalDto[];
+  memoryImageUrl: string | null;
+  memoryCaption: string;
+  memoryImageMeta: MemoryImageMeta;
 };
 
 export function emptyMonthPlan(year: number, month: number): MonthPlanDto {
-  return { year, month, importantNote: "", goals: [] };
+  return {
+    year,
+    month,
+    importantNote: "",
+    goals: [],
+    memoryImageUrl: null,
+    memoryCaption: "",
+    memoryImageMeta: { ...DEFAULT_MEMORY_META },
+  };
+}
+
+export function hasMonthMemory(plan: MonthPlanDto | null | undefined) {
+  return Boolean(plan?.memoryImageUrl);
 }
 
 export function isMonthPlanFilled(plan: MonthPlanDto | null | undefined) {
   if (!plan) return false;
-  return plan.importantNote.trim().length > 0 || plan.goals.length > 0;
+  return (
+    plan.importantNote.trim().length > 0 ||
+    plan.goals.length > 0 ||
+    hasMonthMemory(plan) ||
+    plan.memoryCaption.trim().length > 0
+  );
 }
 
 export function isYearMonth(year: unknown, month: unknown) {
@@ -87,12 +132,18 @@ export function toMonthPlanDto(row: {
   month: number;
   importantNote: string;
   goals: unknown;
+  memoryImageUrl?: string | null;
+  memoryCaption?: string | null;
+  memoryImageMeta?: unknown;
 }): MonthPlanDto {
   return {
     year: row.year,
     month: row.month,
     importantNote: row.importantNote,
     goals: readGoals(row.goals) ?? [],
+    memoryImageUrl: row.memoryImageUrl ?? null,
+    memoryCaption: row.memoryCaption?.trim() ?? "",
+    memoryImageMeta: readMemoryMeta(row.memoryImageMeta),
   };
 }
 
@@ -109,5 +160,16 @@ export function parseMonthPlanPut(input: unknown):
   if (importantNote.length > MONTH_IMPORTANT_MAX) return { ok: false, error: "important" };
   const goals = readGoals(body.goals);
   if (!goals) return { ok: false, error: "goals" };
-  return { ok: true, data: { year, month, importantNote, goals } };
+  return {
+    ok: true,
+    data: {
+      year,
+      month,
+      importantNote,
+      goals,
+      memoryImageUrl: null,
+      memoryCaption: "",
+      memoryImageMeta: { ...DEFAULT_MEMORY_META },
+    },
+  };
 }

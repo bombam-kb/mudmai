@@ -4,6 +4,7 @@ import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { AppSplash } from "@/components/app-splash";
+import { AppNavProvider } from "@/components/app-nav";
 import { AppearanceProvider } from "@/components/appearance-provider";
 import { APPEARANCE_BOOT } from "@/stores/appearance-store";
 import { routing } from "@/i18n/routing";
@@ -76,7 +77,9 @@ export default async function LocaleLayout({ children, params }: Props) {
         <div className="jr-app-root">
           <NextIntlClientProvider messages={messages}>
             <AppearanceProvider>
-              <AppSplash>{children}</AppSplash>
+              <AppNavProvider>
+                <AppSplash>{children}</AppSplash>
+              </AppNavProvider>
             </AppearanceProvider>
           </NextIntlClientProvider>
         </div>

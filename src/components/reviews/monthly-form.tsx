@@ -13,7 +13,10 @@ import {
   type MonthlyReviewDto,
   type MonthlyReviewInput,
 } from "@/lib/reviews/schema";
+import { MonthMemoryBoard } from "@/components/reviews/month-memory-board";
 import { ReviewSaveCelebration } from "@/components/reviews/review-save-celebration";
+import { ReflexRecapLoader } from "@/components/reviews/reflex-loader";
+import { type MonthPlanDto } from "@/lib/month-plan/schema";
 import { useReviewsStore } from "@/stores/reviews-store";
 import { useNudgeStore } from "@/stores/nudge-store";
 import { useOnboardingStore } from "@/stores/onboarding-store";
@@ -24,9 +27,17 @@ type Props = {
   year: number;
   month: number;
   initial: MonthlyReviewDto | null;
+  initialPlan: MonthPlanDto;
 };
 
-export function MonthlyReviewForm({ name, demoMode, year, month, initial }: Props) {
+export function MonthlyReviewForm({
+  name,
+  demoMode,
+  year,
+  month,
+  initial,
+  initialPlan,
+}: Props) {
   const t = useTranslations("reviews");
   const tc = useTranslations("calendar");
   const locale = useLocale() === "en" ? "en" : "th";
@@ -37,10 +48,16 @@ export function MonthlyReviewForm({ name, demoMode, year, month, initial }: Prop
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
+  const [showReflex, setShowReflex] = useState(false);
 
   function finishCelebration() {
     router.push("/reviews");
     router.refresh();
+  }
+
+  function openReflex() {
+    setCelebrate(false);
+    setShowReflex(true);
   }
 
   async function signOut() {
@@ -100,7 +117,19 @@ export function MonthlyReviewForm({ name, demoMode, year, month, initial }: Prop
   return (
     <>
       {celebrate ? (
-        <ReviewSaveCelebration kind="monthly" onDone={finishCelebration} />
+        <ReviewSaveCelebration
+          kind="monthly"
+          onDone={finishCelebration}
+          onReflex={openReflex}
+        />
+      ) : null}
+      {showReflex ? (
+        <ReflexRecapLoader
+          year={year}
+          month={month}
+          demoMode={demoMode}
+          onClose={finishCelebration}
+        />
       ) : null}
       <AppShell name={name} onSignOut={signOut}>
       <Link href="/reviews" className="text-sm font-semibold text-brand">
@@ -116,6 +145,15 @@ export function MonthlyReviewForm({ name, demoMode, year, month, initial }: Prop
           {t("demo")}
         </p>
       ) : null}
+
+      <div className="mb-6">
+        <MonthMemoryBoard
+          year={year}
+          month={month}
+          demoMode={demoMode}
+          initial={initialPlan}
+        />
+      </div>
 
       <div className="mt-6 grid gap-4">
         {(

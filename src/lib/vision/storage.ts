@@ -2,6 +2,26 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 const BUCKET = "vision-board";
 
+export function visionBoardPathFromPublicUrl(url: string): string | null {
+  const marker = `/storage/v1/object/public/${BUCKET}/`;
+  const idx = url.indexOf(marker);
+  if (idx === -1) return null;
+  return decodeURIComponent(url.slice(idx + marker.length));
+}
+
+export async function removeVisionBoardObjects(
+  admin: SupabaseClient,
+  paths: string[],
+) {
+  const unique = [...new Set(paths.filter(Boolean))];
+  if (!unique.length) return;
+  for (let i = 0; i < unique.length; i += 100) {
+    const batch = unique.slice(i, i + 100);
+    const { error } = await admin.storage.from(BUCKET).remove(batch);
+    if (error) console.error("vision storage remove", error);
+  }
+}
+
 async function listAll(
   admin: SupabaseClient,
   prefix: string,
@@ -40,9 +60,5 @@ export async function deleteVisionStorageForUser(
     }
   }
 
-  for (let i = 0; i < paths.length; i += 100) {
-    const batch = paths.slice(i, i + 100);
-    const { error } = await admin.storage.from(BUCKET).remove(batch);
-    if (error) console.error("vision storage remove", error);
-  }
+  await removeVisionBoardObjects(admin, paths);
 }

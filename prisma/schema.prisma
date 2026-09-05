@@ -370,6 +370,9 @@ model MonthlyPlan {
   month         Int
   importantNote String   @default("") @db.Text
   goals         Json
+  memoryImageUrl String?  @db.Text
+  memoryCaption  String   @default("") @db.VarChar(500)
+  memoryImageMeta Json?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

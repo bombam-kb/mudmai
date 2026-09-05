@@ -758,7 +758,7 @@
     "radarTitle": "Pillar radar",
     "radarHint": "Purple = latest review · gray = last-year reflection scores",
     "yearTitle": "Scores across the year",
-    "yearHint": "One colored line per pillar, from monthly reviews.",
+    "yearHint": "One colored line per pillar from monthly reviews · dashed purple = overall average",
     "yearEmpty": "No monthly reviews yet — write the first month and the chart appears.",
     "monthlyList": "Monthly reviews",
     "quarterlyList": "Quarterly reviews",
@@ -769,7 +769,120 @@
       "title": "Thank you for making time for yourself",
       "bodyMonthly": "Pausing to reflect each month keeps the year from drifting — this is a gift you give yourself.",
       "bodyQuarterly": "Taking time to review each season of life is a good thing — you just did that.",
-      "close": "Back to reviews"
+      "close": "Back to reviews",
+      "watchReflex": "Watch Reflex"
+    },
+    "overview": {
+      "eyebrow": "Year {year} overview",
+      "title": "The colors of your year",
+      "hint": "See overall and per-pillar scores — know which months need a push and which are lifting.",
+      "ytdAverage": "Overall average",
+      "ofFive": "out of 5",
+      "statusLabel": "Status: {status}",
+      "overallShort": "Overall",
+      "completed": "Reviewed",
+      "months": "months",
+      "latestTrend": "Vs last month",
+      "firstMonth": "First month logged",
+      "improving": "Improving",
+      "declining": "Declining",
+      "steady": "Steady",
+      "tapestry": "12-month color map",
+      "tapestryAria": "Monthly score colors across the year",
+      "bestMonth": "Best month",
+      "toughMonth": "Month to watch",
+      "pillarAverage": "Average per pillar",
+      "pillarAverageHint": "Status from your year-to-date average — where to push hardest",
+      "monthListHint": "Each card shows that month’s overall score plus all six pillar statuses",
+      "status": {
+        "critical": "Needs urgent care",
+        "low": "Needs a push",
+        "neutral": "Okay",
+        "good": "Good",
+        "great": "Great"
+      },
+      "pushTitle": "To finish the year well — push in the months ahead",
+      "pushBody": "Overall now {current}/5 · Year-end target {target} · Gap {gap} · {remaining} months left — need {required}/5 per month",
+      "pushFocus": "Push here first",
+      "pushOnTrackTitle": "On track — keep the momentum",
+      "pushOnTrackBody": "Overall {score}/5 is close to the {target} year-end target — keep going",
+      "pushDoneTitle": "All 12 months logged",
+      "pushDoneBody": "Year closed at {score}/5 · Status: {status}"
+    },
+    "memory": {
+      "eyebrow": "A5 board",
+      "title": "This month’s memory photo",
+      "hint": "One photo per month inside an A5 frame — drag to compose and note how the month felt.",
+      "addPhoto": "Add photo",
+      "a5Note": "148 × 210 mm",
+      "caption": "This month felt…",
+      "captionPlaceholder": "A short note on how the month was",
+      "zoom": "Zoom in frame",
+      "dragHint": "Drag the photo inside the A5 frame",
+      "save": "Save board",
+      "saving": "Saving…",
+      "saved": "Board saved",
+      "replace": "Replace photo",
+      "remove": "Remove photo",
+      "error": "Upload failed. Try again.",
+      "errorSize": "Image too large (max 3 MB)"
+    },
+    "reflex": {
+      "brand": "Reflex",
+      "watch": "Watch Reflex",
+      "aria": "Monthly memory recap cinema",
+      "loading": "Opening the reel…",
+      "missingTitle": "No Reflex reel yet",
+      "missingBody": "Save this month’s review first, then come back.",
+      "close": "Close",
+      "next": "Next",
+      "prev": "Back",
+      "finish": "End reel",
+      "introEyebrow": "Memory cinema",
+      "introTitle": "{month}",
+      "introBody": "Pause and re-read what you wrote — recall this chapter of your year.",
+      "slide": {
+        "loved": {
+          "eyebrow": "Scene 1",
+          "title": "What you loved most"
+        },
+        "stop": {
+          "eyebrow": "Scene 2",
+          "title": "What to stop"
+        },
+        "continue": {
+          "eyebrow": "Scene 3",
+          "title": "What to continue"
+        },
+        "pillars": {
+          "eyebrow": "Scene 4",
+          "title": "Score by pillar"
+        },
+        "highlights": {
+          "eyebrow": "Highlight reel",
+          "title": "Important work this month",
+          "noNote": "No important note for this month yet",
+          "noGoals": "No monthly goals yet",
+          "progress": "Month goals done {completed}/{total} ({percent}%)"
+        },
+        "todos": {
+          "eyebrow": "Daily work scene",
+          "title": "What you cleared",
+          "rate": "Completed {completed}/{total} todos ({rate}%)",
+          "empty": "No daily todos logged this month"
+        },
+        "outro": {
+          "eyebrow": "Final scene",
+          "title": "Keep the memory",
+          "body": "Next month is a fresh chance — use what you just recalled and push forward.",
+          "up": "Overall up +{delta} vs last month",
+          "down": "Overall down −{delta} — you can push again next month"
+        },
+        "memory": {
+          "eyebrow": "Memory scene",
+          "title": "The photo you kept"
+        }
+      }
     }
   },
   "settings": {
@@ -931,7 +1044,9 @@
   },
   "loader": {
     "label": "Opening your journey",
-    "hint": "Six colors finding their path"
+    "hint": "Six colors finding their path",
+    "nav": "Opening page…",
+    "navHint": "Just a moment"
   },
   "admin": {
     "eyebrow": "Operator tools",

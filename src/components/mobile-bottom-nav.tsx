@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { usePathname, useRouter } from "@/i18n/navigation";
 import { NavIcon, type NavIconName } from "@/components/icons";
+import { navLinkActive, useAppNav } from "@/components/app-nav";
 
 const MOBILE_NAV: { href: string; key: NavIconName }[] = [
   { href: "/home", key: "home" },
@@ -12,11 +11,6 @@ const MOBILE_NAV: { href: string; key: NavIconName }[] = [
   { href: "/reviews", key: "reviews" },
   { href: "/settings", key: "settings" },
 ];
-
-function tabActive(pathname: string, href: string) {
-  if (href === "/home") return pathname === "/home" || pathname === "/";
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
 
 function TabSpinner() {
   return (
@@ -72,49 +66,13 @@ function MobileTab({ href, navKey, label, active, pending, onNavigate }: TabProp
 
 export function MobileBottomNav() {
   const t = useTranslations();
-  const pathname = usePathname();
-  const router = useRouter();
-  const [targetHref, setTargetHref] = useState<string | null>(null);
-  const [isNavigating, startNavigation] = useTransition();
-
-  useEffect(() => {
-    for (const item of MOBILE_NAV) {
-      router.prefetch(item.href);
-    }
-  }, [router]);
-
-  useEffect(() => {
-    if (!targetHref) return;
-    if (tabActive(pathname, targetHref)) {
-      setTargetHref(null);
-    }
-  }, [pathname, targetHref]);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    if (isNavigating || targetHref) {
-      root.dataset.navPending = "true";
-    } else {
-      delete root.dataset.navPending;
-    }
-    return () => {
-      delete root.dataset.navPending;
-    };
-  }, [isNavigating, targetHref]);
-
-  function navigate(href: string) {
-    if (tabActive(pathname, href)) return;
-    setTargetHref(href);
-    startNavigation(() => {
-      router.push(href, { scroll: false });
-    });
-  }
+  const { pathname, targetHref, navigate } = useAppNav();
 
   return (
     <nav className="jr-bottom-nav hidden" aria-label={t("nav.tabs")}>
       <div className="jr-tab-row">
         {MOBILE_NAV.map((item) => {
-          const active = tabActive(pathname, item.href);
+          const active = navLinkActive(pathname, item.href);
           const pending = targetHref === item.href && !active;
           return (
             <MobileTab

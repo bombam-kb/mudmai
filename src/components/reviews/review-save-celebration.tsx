@@ -9,9 +9,11 @@ type Kind = "monthly" | "quarterly";
 export function ReviewSaveCelebration({
   kind,
   onDone,
+  onReflex,
 }: {
   kind: Kind;
   onDone: () => void;
+  onReflex?: () => void;
 }) {
   const t = useTranslations("reviews.savedCelebration");
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -57,14 +59,25 @@ export function ReviewSaveCelebration({
         <p id="review-celebrate-body" className="celebrate-empathy mt-4 text-base leading-relaxed text-ink/85">
           {body}
         </p>
-        <button
-          ref={closeRef}
-          type="button"
-          onClick={onDone}
-          className="mt-6 w-full rounded-full bg-brand py-3 text-sm font-semibold text-white"
-        >
-          {t("close")}
-        </button>
+        <div className={`mt-6 grid gap-2 ${kind === "monthly" && onReflex ? "grid-cols-1 sm:grid-cols-2" : ""}`}>
+          {kind === "monthly" && onReflex ? (
+            <button
+              type="button"
+              onClick={onReflex}
+              className="w-full rounded-full bg-ink py-3 text-sm font-semibold text-white"
+            >
+              {t("watchReflex")}
+            </button>
+          ) : null}
+          <button
+            ref={closeRef}
+            type="button"
+            onClick={onDone}
+            className="w-full rounded-full bg-brand py-3 text-sm font-semibold text-white"
+          >
+            {t("close")}
+          </button>
+        </div>
       </div>
     </div>
   );

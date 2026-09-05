@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Link, usePathname } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
 import { AppearanceToggles } from "./appearance-toggles";
 import { ReminderWatcher } from "@/components/reminders/watcher";
 import { PdpaBanner } from "@/components/pdpa/banner";
@@ -9,6 +9,7 @@ import { ClientStoreBinder } from "@/components/client-store-binder";
 import { NudgeWatcher } from "@/components/nudge/watcher";
 import { BrandLockup, type NavIconName } from "@/components/icons";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { navLinkActive, useAppNav } from "@/components/app-nav";
 
 const DESKTOP_NAV: { href: string; key: NavIconName }[] = [
   { href: "/home", key: "home" },
@@ -19,21 +20,65 @@ const DESKTOP_NAV: { href: string; key: NavIconName }[] = [
   { href: "/settings", key: "settings" },
 ];
 
-function navLinkActive(pathname: string, href: string) {
-  if (href === "/home") return pathname === "/home" || pathname === "/";
-  return pathname === href || pathname.startsWith(`${href}/`);
+function DesktopNavLink({
+  href,
+  label,
+  active,
+}: {
+  href: string;
+  label: string;
+  active: boolean;
+}) {
+  const { navigate } = useAppNav();
+
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      aria-busy={!active ? undefined : false}
+      className={`jr-top-nav-link ${active ? "is-active" : ""}`}
+      onClick={(event) => {
+        if (active) return;
+        event.preventDefault();
+        navigate(href);
+      }}
+    >
+      {label}
+    </Link>
+  );
 }
 
-type Props = {
+function BrandHomeLink() {
+  const { pathname, navigate } = useAppNav();
+
+  return (
+    <Link
+      href="/home"
+      className="min-w-0"
+      onClick={(event) => {
+        if (navLinkActive(pathname, "/home")) return;
+        event.preventDefault();
+        navigate("/home");
+      }}
+    >
+      <BrandLockup />
+    </Link>
+  );
+}
+
+function AppShellFrame({
+  name,
+  children,
+  onSignOut,
+  variant = "default",
+}: {
   name?: string | null;
   children: React.ReactNode;
   onSignOut?: () => void;
   variant?: "default" | "canvas";
-};
-
-export function AppShell({ name, children, onSignOut, variant = "default" }: Props) {
+}) {
   const t = useTranslations();
-  const pathname = usePathname();
+  const { pathname } = useAppNav();
   const canvas = variant === "canvas";
 
   return (
@@ -46,21 +91,17 @@ export function AppShell({ name, children, onSignOut, variant = "default" }: Pro
     >
       <header className="jr-header sticky top-0 z-20 border-b border-white/70 bg-white/80 backdrop-blur">
         <div className="jr-header-inner mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
-          <Link href="/home" className="min-w-0">
-            <BrandLockup />
-          </Link>
+          <BrandHomeLink />
           <nav className="jr-top-nav hidden items-center gap-1 overflow-x-auto text-sm font-medium">
             {DESKTOP_NAV.map((item) => {
               const active = navLinkActive(pathname, item.href);
               return (
-                <Link
+                <DesktopNavLink
                   key={item.key}
                   href={item.href}
-                  aria-current={active ? "page" : undefined}
-                  className={`jr-top-nav-link ${active ? "is-active" : ""}`}
-                >
-                  {t(`nav.${item.key}`)}
-                </Link>
+                  label={t(`nav.${item.key}`)}
+                  active={active}
+                />
               );
             })}
           </nav>
@@ -89,5 +130,23 @@ export function AppShell({ name, children, onSignOut, variant = "default" }: Pro
       <NudgeWatcher />
       <ClientStoreBinder />
     </div>
+  );
+}
+
+export function AppShell({
+  name,
+  children,
+  onSignOut,
+  variant = "default",
+}: {
+  name?: string | null;
+  children: React.ReactNode;
+  onSignOut?: () => void;
+  variant?: "default" | "canvas";
+}) {
+  return (
+    <AppShellFrame name={name} onSignOut={onSignOut} variant={variant}>
+      {children}
+    </AppShellFrame>
   );
 }
