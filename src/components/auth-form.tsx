@@ -37,6 +37,7 @@ export function AuthForm({
     if (errorCode === "line_config") return "line_config";
     if (errorCode === "line_denied") return "line_denied";
     if (errorCode === "line_session") return "line_session";
+    if (errorCode === "line_taken") return "line_taken";
     if (errorCode === "line") return "line";
     return null;
   });
@@ -199,10 +200,15 @@ export function AuthForm({
                       ? t("lineDenied")
                       : error === "line_session"
                         ? t("lineSession")
-                        : error === "line"
-                          ? t("lineError")
-                          : t("error")}
+                        : error === "line_taken"
+                          ? t("lineTaken")
+                          : error === "line"
+                            ? t("lineError")
+                            : t("error")}
             </p>
+          ) : null}
+          {error === "line_taken" ? (
+            <p className="text-sm text-muted">{t("lineTakenHint")}</p>
           ) : null}
           {info ? <p className="text-sm text-finance">{info}</p> : null}
           <button

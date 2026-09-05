@@ -35,3 +35,32 @@ export async function refreshLineReachability(userId: string) {
   });
   return probed;
 }
+
+/** Re-probe OA reachability before push; keeps DB in sync when friendship changed. */
+export async function resolveLinePushState(input: {
+  userId: string;
+  lineUserId?: string | null;
+  reminderOptIn?: boolean;
+  reachable: boolean;
+}) {
+  const optIn = Boolean(input.reminderOptIn);
+  if (!input.lineUserId || !optIn) {
+    return { lineUserId: input.lineUserId ?? null, reachable: false, optIn };
+  }
+
+  const probed = await probeLineReachable(input.lineUserId);
+  if (probed !== null && probed !== input.reachable) {
+    await prisma.lineAccount.updateMany({
+      where: { userId: input.userId, lineUserId: input.lineUserId },
+      data: probed
+        ? { reachable: true, friendAt: new Date(), unfollowedAt: null }
+        : { reachable: false, unfollowedAt: new Date() },
+    });
+  }
+
+  return {
+    lineUserId: input.lineUserId,
+    reachable: probed ?? input.reachable,
+    optIn,
+  };
+}

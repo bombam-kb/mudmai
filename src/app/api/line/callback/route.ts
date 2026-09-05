@@ -10,8 +10,18 @@ import {
   parseOAuthState,
   verifyLineIdToken,
 } from "@/lib/line/oauth";
-import { createLineAuthUser, createSupabaseSessionForEmail } from "@/lib/line/session";
-import { ensureLineUserProfile, upsertLineAccount } from "@/lib/line/account";
+import {
+  isLineUserTakenByOther,
+  LineLinkTakenError,
+  ensureLineUserProfile,
+  upsertLineAccount,
+} from "@/lib/line/account";
+import { refreshLineReachability } from "@/lib/line/reachability";
+import {
+  createLineAuthUser,
+  createSupabaseSessionForEmail,
+  createSupabaseSessionForUserId,
+} from "@/lib/line/session";
 import { timingSafeEqualText } from "@/lib/crypto/secret";
 import { rateLimitJson } from "@/lib/http/rate-limit";
 
@@ -19,6 +29,14 @@ function redirectTo(origin: string, locale: "th" | "en", path: string, error?: s
   const url = new URL(`/${locale}${path}`, origin);
   if (error) url.searchParams.set("error", error);
   return NextResponse.redirect(url);
+}
+
+function lineTakenRedirect(
+  origin: string,
+  locale: "th" | "en",
+  intent: "login" | "link" | undefined,
+) {
+  return redirectTo(origin, locale, intent === "link" ? "/settings" : "/login", "line_taken");
 }
 
 export async function GET(request: Request) {
@@ -67,27 +85,38 @@ export async function GET(request: Request) {
       url.searchParams.get("friendship_status_changed") === "true" ||
       (await lineFriendship(tokens.access_token));
 
+    const { user: sessionUser } = await getSessionUser();
+
     if (state.intent === "link") {
-      const { user } = await getSessionUser();
-      if (!user) return redirectTo(origin, locale, "/login", "line_session");
-      const taken = await prisma.lineAccount.findUnique({ where: { lineUserId } });
-      if (taken && taken.userId !== user.id) {
-        return redirectTo(origin, locale, "/settings", "line_taken");
+      if (!sessionUser) return redirectTo(origin, locale, "/login", "line_session");
+      if (await isLineUserTakenByOther(lineUserId, sessionUser.id)) {
+        return lineTakenRedirect(origin, locale, "link");
       }
-      await upsertLineAccount({ userId: user.id, lineUserId, reachable });
+      await upsertLineAccount({ userId: sessionUser.id, lineUserId, reachable });
+      await refreshLineReachability(sessionUser.id).catch(() => null);
       return redirectTo(origin, locale, "/settings");
     }
 
     const mapped = await prisma.lineAccount.findUnique({
       where: { lineUserId },
-      include: { user: { select: { email: true } } },
+      select: { userId: true },
     });
 
+    if (sessionUser) {
+      if (mapped && mapped.userId !== sessionUser.id) {
+        return lineTakenRedirect(origin, locale, "login");
+      }
+      await upsertLineAccount({ userId: sessionUser.id, lineUserId, reachable });
+      return redirectTo(origin, locale, state.next);
+    }
+
     if (mapped) {
-      const ok = await createSupabaseSessionForEmail(mapped.user.email);
+      const redirect = redirectTo(origin, locale, state.next);
+      const ok = await createSupabaseSessionForUserId(mapped.userId, redirect);
       if (!ok) return redirectTo(origin, locale, "/login", "line_session");
       await upsertLineAccount({ userId: mapped.userId, lineUserId, reachable });
-      return redirectTo(origin, locale, state.next);
+      await refreshLineReachability(mapped.userId).catch(() => null);
+      return redirect;
     }
 
     const created = await createLineAuthUser(lineUserId, locale);
@@ -113,8 +142,9 @@ export async function GET(request: Request) {
       await upsertLineAccount({ userId: authUserId, lineUserId, reachable });
     }
 
-    const ok = await createSupabaseSessionForEmail(created.email);
-    if (!ok) return redirectTo(origin, locale, "/login", "line_session");
+    const redirect = redirectTo(origin, locale, state.next);
+    const sessionOk = await createSupabaseSessionForEmail(created.email, redirect);
+    if (!sessionOk) return redirectTo(origin, locale, "/login", "line_session");
 
     if (!authUserId) {
       const { user } = await getSessionUser();
@@ -129,8 +159,11 @@ export async function GET(request: Request) {
       await upsertLineAccount({ userId: user.id, lineUserId, reachable });
     }
 
-    return redirectTo(origin, locale, state.next);
-  } catch {
+    return redirect;
+  } catch (error) {
+    if (error instanceof LineLinkTakenError) {
+      return lineTakenRedirect(origin, locale, state?.intent);
+    }
     return redirectTo(origin, locale, "/login", "line");
   }
 }

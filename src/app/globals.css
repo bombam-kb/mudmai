@@ -189,6 +189,33 @@ html[data-layout="desktop"] .jr-top-nav {
   display: flex;
 }
 
+.jr-top-nav-link {
+  flex-shrink: 0;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  color: var(--color-muted);
+  text-decoration: none;
+  font-weight: 600;
+  transition:
+    color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.jr-top-nav-link:hover {
+  color: var(--color-ink);
+}
+
+.jr-top-nav-link.is-active {
+  color: var(--color-brand);
+  background: color-mix(in srgb, var(--color-brand) 12%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-brand) 24%, transparent);
+}
+
+html.dark .jr-top-nav-link.is-active {
+  background: color-mix(in srgb, var(--color-brand) 22%, transparent);
+}
+
 html[data-keyboard="open"][data-layout="mobile"] {
   --jr-main-pad-bottom: 1.15rem;
 }
@@ -979,6 +1006,36 @@ html[data-layout="mobile"] .jr-page-head {
   align-items: stretch;
 }
 
+.jr-goals-fab {
+  position: fixed;
+  right: 1rem;
+  bottom: calc(5.25rem + env(safe-area-inset-bottom));
+  z-index: 25;
+  display: grid;
+  width: 3.25rem;
+  height: 3.25rem;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--color-brand);
+  color: #fff;
+  box-shadow:
+    0 8px 24px rgb(124 58 237 / 0.35),
+    0 0 0 1px rgb(255 255 255 / 0.12);
+  text-decoration: none;
+}
+
+.jr-goals-fab:active {
+  transform: scale(0.96);
+}
+
+html[data-layout="desktop"] .jr-goals-fab {
+  display: none;
+}
+
+html[data-keyboard="open"][data-layout="mobile"] .jr-goals-fab {
+  display: none;
+}
+
 html[data-layout="mobile"] .jr-cal-toolbar {
   flex-direction: row;
   align-items: flex-end;
@@ -1701,6 +1758,12 @@ html[data-layout="desktop"] .jr-home-focus {
   cursor: pointer;
 }
 
+.jr-day-todo-pillar {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+}
+
 .jr-day-todo-check::before {
   content: "";
   position: absolute;
@@ -1729,23 +1792,14 @@ html[data-layout="desktop"] .jr-home-focus {
   align-items: center;
   gap: 0.35rem;
   padding: 0.35rem 0.2rem;
-  border: 0;
-  background: transparent;
-  text-align: left;
-  color: inherit;
-  cursor: pointer;
-}
-
-.jr-day-todo-pillar {
-  display: grid;
-  flex-shrink: 0;
-  place-items: center;
 }
 
 .jr-day-todo-title {
   min-width: 0;
   font-size: 0.9rem;
   line-height: 1.35;
+  user-select: text;
+  cursor: text;
 }
 
 .jr-day-todo-more {
@@ -1760,8 +1814,7 @@ html[data-layout="desktop"] .jr-home-focus {
   cursor: pointer;
 }
 
-.jr-day-todo-more:active,
-.jr-day-todo-main:active {
+.jr-day-todo-more:active {
   background: rgb(124 58 237 / 0.08);
 }
 
@@ -2176,7 +2229,21 @@ select:disabled,
 }
 
 .todo-card {
+  cursor: default;
+}
+
+.todo-row-check {
   cursor: pointer;
+}
+
+.todo-row-title {
+  user-select: text;
+  cursor: text;
+}
+
+html[data-layout="mobile"] .todo-row-check {
+  width: 2.75rem;
+  height: 2.75rem;
 }
 
 .todo-card.todo-editing {

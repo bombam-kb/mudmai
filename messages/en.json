@@ -195,6 +195,8 @@
     "lineConfig": "LINE Login is not configured on this server.",
     "lineDenied": "LINE sign-in was cancelled.",
     "lineSession": "Could not open a session. Try again, or use email.",
+    "lineTaken": "That LINE account is already linked to someone else.",
+    "lineTakenHint": "Unlink it from the other account first, or contact an admin if this is your LINE.",
     "lineError": "LINE sign-in failed. Please try again."
   },
   "home": {
@@ -560,8 +562,11 @@
     "demo": "Demo mode — stored in this browser, not cloud-synced.",
     "allQuarters": "All quarters",
     "allPillars": "All pillars",
-    "empty": "No goals in this view yet — create your first SMART goal.",
+    "empty": "No goals in this view yet.",
+    "emptyCreate": "Create SMART goal",
     "emptyQuarter": "Nothing in this quarter yet",
+    "createQuarter": "Add Q{quarter} goal",
+    "createFilteredHint": "Uses the quarter and pillar filters you picked",
     "quarter": "Quarter",
     "pillar": "Pillar",
     "goalTitle": "Goal title",
@@ -631,7 +636,7 @@
     "deleteConfirm": "Delete this task?",
     "deleteConfirmBody": "“{title}” will be removed. This can’t be undone.",
     "done": "Done",
-    "checkHint": "Tap to check off",
+    "checkHint": "Tap the circle to check off",
     "allDone": "All done for today — nice work!",
     "celebrate": {
       "eyebrow": "Today’s list is done",
@@ -796,6 +801,7 @@
     "lineUnlinkConfirm": "Disconnect LINE from this email account? You can still sign in with email.",
     "lineOnly": "This account signs in with LINE as its primary method, so it cannot be disconnected — you can still turn off chat reminders above.",
     "lineTaken": "That LINE account is already linked to someone else.",
+    "lineTakenHint": "Unlink it from the other account first, or contact an admin if this is your LINE.",
     "lineDenied": "LINE linking was cancelled.",
     "reminders": "Notifications",
     "remindersBody": "The system picks when to ping you from your workload and the month/quarter cycle. You only turn notifications on or off. Copies land in the in-app inbox, and in LINE if it’s connected.",

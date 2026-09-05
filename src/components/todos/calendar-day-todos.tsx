@@ -241,23 +241,21 @@ export function CalendarDayTodos({
               aria-pressed={todo.isCompleted}
               aria-label={todo.isCompleted ? tt("done") : tt("checkHint")}
               disabled={busy}
-              onClick={() => void handleToggle(todo)}
+              onClick={(event) => {
+                event.stopPropagation();
+                void handleToggle(todo);
+              }}
             >
               {todo.isCompleted ? "✓" : null}
             </button>
-            <button
-              type="button"
-              className="jr-day-todo-main"
-              disabled={busy}
-              onClick={() => openSheet(todo)}
-            >
+            <div className="jr-day-todo-main">
               {todo.pillar ? (
                 <span className="jr-day-todo-pillar">
                   <PillarIcon id={todo.pillar} size={14} />
                 </span>
               ) : null}
               <span className="jr-day-todo-title">{todo.title}</span>
-            </button>
+            </div>
             <button
               type="button"
               className="jr-day-todo-more"

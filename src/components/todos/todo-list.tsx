@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { type PillarId } from "@/lib/pillars";
 import { PencilIcon, PlusIcon, PostponeIcon, TrashIcon } from "@/components/icons";
@@ -547,13 +547,6 @@ function TodoRow({
     onTitle(trimmed);
   }
 
-  function onCardClick(event: MouseEvent<HTMLElement>) {
-    if (locked) return;
-    const target = event.target as HTMLElement;
-    if (target.closest("button, select, textarea, input, a, label")) return;
-    onToggle();
-  }
-
   return (
     <li
       className={`todo-card group relative rounded-2xl px-3 py-3 ring-1 transition ${
@@ -568,14 +561,16 @@ function TodoRow({
               : "bg-slate-50 ring-slate-100 hover:ring-brand/40"
       }`}
       aria-busy={pending}
-      onClick={onCardClick}
     >
       <div className="todo-row">
         <button
           type="button"
-          onClick={onToggle}
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggle();
+          }}
           disabled={pending || editing}
-          className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 ${
+          className={`todo-row-check mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 ${
             pending
               ? "border-brand text-brand"
               : todo.isCompleted
@@ -583,7 +578,7 @@ function TodoRow({
                 : "border-slate-300 bg-white"
           }`}
           aria-pressed={todo.isCompleted}
-          aria-label={pending ? t("saving") : t("done")}
+          aria-label={pending ? t("saving") : todo.isCompleted ? t("done") : t("checkHint")}
         >
           {pending ? (
             <span className="todo-check-spin" />
@@ -618,7 +613,7 @@ function TodoRow({
           ) : (
             <div className="todo-row-head">
               <p
-                className={`min-w-0 flex-1 text-sm font-semibold leading-6 ${
+                className={`todo-row-title min-w-0 flex-1 text-sm font-semibold leading-6 ${
                   todo.isCompleted ? "text-muted line-through" : "text-ink"
                 }`}
               >
@@ -738,14 +733,6 @@ function TodoRow({
             </button>
           </div>
         </div>
-      ) : null}
-      {!todo.isCompleted && !pending && !editing && !confirmDelete ? (
-        <p className="todo-check-hint" aria-hidden>
-          <span className="grid h-4 w-4 place-items-center rounded-full bg-emerald-500 text-[10px] font-bold text-white">
-            ✓
-          </span>
-          {t("checkHint")}
-        </p>
       ) : null}
       {showPanel && !confirmDelete ? (
         <div className="relative z-10">

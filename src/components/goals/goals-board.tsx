@@ -7,7 +7,7 @@ import { AppShell } from "@/components/app-shell";
 import { MobileFold } from "@/components/mobile-fold";
 import { GoalCard } from "@/components/goals/goal-card";
 import { PILLARS, type PillarId } from "@/lib/pillars";
-import { PillarIcon } from "@/components/icons";
+import { PillarIcon, PlusIcon } from "@/components/icons";
 import type { GoalDto } from "@/lib/goals/schema";
 import type { MonthPlanDto } from "@/lib/month-plan/schema";
 import { calendarParts, currentQuarter } from "@/lib/year";
@@ -25,6 +25,13 @@ type Props = {
   month?: number;
   initialPlan?: MonthPlanDto | null;
 };
+
+function buildCreateHref(quarter: number | 0, pillar: PillarId | "ALL", quarterOverride?: number) {
+  const q = quarterOverride ?? (quarter || currentQuarter());
+  const params = new URLSearchParams({ quarter: String(q) });
+  if (pillar !== "ALL") params.set("pillar", pillar);
+  return `/goals/new?${params.toString()}`;
+}
 
 export function GoalsBoard({
   name,
@@ -60,6 +67,9 @@ export function GoalsBoard({
     goals: visible.filter((goal) => goal.quarter === q),
   }));
 
+  const createHref = buildCreateHref(quarter, pillar);
+  const filtered = quarter !== 0 || pillar !== "ALL";
+
   async function signOut() {
     await signOutClient();
     router.replace("/");
@@ -82,8 +92,8 @@ export function GoalsBoard({
           <h1 className="font-display text-4xl">{t("title")}</h1>
         </div>
         <Link
-          href={`/goals/new?quarter=${quarter || currentQuarter()}`}
-          className="jr-page-cta rounded-full bg-brand px-5 py-2.5 font-semibold text-white shadow-card"
+          href={createHref}
+          className="jr-page-cta jr-desktop-only rounded-full bg-brand px-5 py-2.5 font-semibold text-white shadow-card"
         >
           {t("create")}
         </Link>
@@ -162,9 +172,29 @@ export function GoalsBoard({
         ))}
       </div>
 
+      <div className="jr-goals-create-bar jr-mobile-only mb-6">
+        <Link
+          href={createHref}
+          className="jr-goals-create-btn inline-flex min-h-[2.75rem] w-full items-center justify-center gap-2 rounded-full bg-brand px-5 py-2.5 font-semibold text-white shadow-card"
+        >
+          <PlusIcon size={18} />
+          {t("create")}
+        </Link>
+        {filtered ? (
+          <p className="mt-2 text-center text-xs text-muted">{t("createFilteredHint")}</p>
+        ) : null}
+      </div>
+
       {visible.length === 0 ? (
         <div className="rounded-3xl bg-white p-8 text-center shadow-card">
           <p className="text-lg text-muted">{t("empty")}</p>
+          <Link
+            href={createHref}
+            className="mt-4 inline-flex min-h-[2.75rem] items-center justify-center gap-2 rounded-full bg-brand px-6 py-2.5 font-semibold text-white shadow-card"
+          >
+            <PlusIcon size={18} />
+            {t("emptyCreate")}
+          </Link>
         </div>
       ) : quarter === 0 ? (
         <div className="grid gap-6 lg:grid-cols-2">
@@ -195,7 +225,16 @@ export function GoalsBoard({
               >
                 <div className="space-y-4">
                   {group.goals.length === 0 ? (
-                    <p className="text-sm text-muted">{t("emptyQuarter")}</p>
+                    <div className="space-y-3">
+                      <p className="text-sm text-muted">{t("emptyQuarter")}</p>
+                      <Link
+                        href={buildCreateHref(quarter, pillar, group.quarter)}
+                        className="inline-flex min-h-[2.75rem] items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white"
+                      >
+                        <PlusIcon size={16} />
+                        {t("createQuarter", { quarter: group.quarter })}
+                      </Link>
+                    </div>
                   ) : (
                     group.goals.map((goal) => (
                       <GoalCard
@@ -223,6 +262,15 @@ export function GoalsBoard({
           ))}
         </div>
       )}
+
+      <Link
+        href={createHref}
+        className="jr-goals-fab jr-mobile-only"
+        aria-label={t("create")}
+        title={t("create")}
+      >
+        <PlusIcon size={22} />
+      </Link>
     </AppShell>
   );
 }

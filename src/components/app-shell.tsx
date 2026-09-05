@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
+import { Link, usePathname } from "@/i18n/navigation";
 import { AppearanceToggles } from "./appearance-toggles";
 import { ReminderWatcher } from "@/components/reminders/watcher";
 import { PdpaBanner } from "@/components/pdpa/banner";
@@ -19,6 +19,11 @@ const DESKTOP_NAV: { href: string; key: NavIconName }[] = [
   { href: "/settings", key: "settings" },
 ];
 
+function navLinkActive(pathname: string, href: string) {
+  if (href === "/home") return pathname === "/home" || pathname === "/";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 type Props = {
   name?: string | null;
   children: React.ReactNode;
@@ -28,6 +33,7 @@ type Props = {
 
 export function AppShell({ name, children, onSignOut, variant = "default" }: Props) {
   const t = useTranslations();
+  const pathname = usePathname();
   const canvas = variant === "canvas";
 
   return (
@@ -43,12 +49,20 @@ export function AppShell({ name, children, onSignOut, variant = "default" }: Pro
           <Link href="/home" className="min-w-0">
             <BrandLockup />
           </Link>
-          <nav className="jr-top-nav hidden items-center gap-4 overflow-x-auto text-sm font-medium text-muted">
-            {DESKTOP_NAV.map((item) => (
-              <Link key={item.key} href={item.href} className="hover:text-ink">
-                {t(`nav.${item.key}`)}
-              </Link>
-            ))}
+          <nav className="jr-top-nav hidden items-center gap-1 overflow-x-auto text-sm font-medium">
+            {DESKTOP_NAV.map((item) => {
+              const active = navLinkActive(pathname, item.href);
+              return (
+                <Link
+                  key={item.key}
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`jr-top-nav-link ${active ? "is-active" : ""}`}
+                >
+                  {t(`nav.${item.key}`)}
+                </Link>
+              );
+            })}
           </nav>
           <div className="flex shrink-0 items-center justify-end gap-2">
             <AppearanceToggles showSignOut onSignOut={onSignOut} />

@@ -29,8 +29,13 @@ export function LineConnectCard({
   const t = useTranslations("settings");
   const locale = useLocale();
   const [status, setStatus] = useState(initial);
+  const noticeHint = error === "line_taken" ? t("lineTakenHint") : "";
   const [notice, setNotice] = useState(
-    error === "line_taken" ? t("lineTaken") : error === "line_denied" ? t("lineDenied") : "",
+    error === "line_taken"
+      ? t("lineTaken")
+      : error === "line_denied"
+        ? t("lineDenied")
+        : "",
   );
   const [pending, setPending] = useState(false);
 
@@ -144,7 +149,12 @@ export function LineConnectCard({
           {t("lineConnect")}
         </a>
       )}
-      {notice ? <p className="mt-3 text-sm text-muted">{notice}</p> : null}
+      {notice ? (
+        <div className="mt-3 space-y-1">
+          <p className="text-sm font-semibold text-physical">{notice}</p>
+          {noticeHint ? <p className="text-sm text-muted">{noticeHint}</p> : null}
+        </div>
+      ) : null}
     </section>
   );
 }

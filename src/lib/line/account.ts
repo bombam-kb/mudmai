@@ -14,6 +14,24 @@ export type LineLinkStatus = {
   canUnlink: boolean;
 };
 
+export class LineLinkTakenError extends Error {
+  readonly code = "line_taken" as const;
+
+  constructor() {
+    super("line_taken");
+    this.name = "LineLinkTakenError";
+  }
+}
+
+/** True when this LINE user id is linked to a different Mudmai account. */
+export async function isLineUserTakenByOther(lineUserId: string, userId: string) {
+  const row = await prisma.lineAccount.findUnique({
+    where: { lineUserId },
+    select: { userId: true },
+  });
+  return Boolean(row && row.userId !== userId);
+}
+
 export async function getLineLinkStatus(userId: string): Promise<LineLinkStatus> {
   const [account, user] = await Promise.all([
     prisma.lineAccount.findUnique({ where: { userId } }),
@@ -48,6 +66,14 @@ export async function upsertLineAccount(input: {
   lineUserId: string;
   reachable: boolean;
 }) {
+  const owner = await prisma.lineAccount.findUnique({
+    where: { lineUserId: input.lineUserId },
+    select: { userId: true },
+  });
+  if (owner && owner.userId !== input.userId) {
+    throw new LineLinkTakenError();
+  }
+
   const now = new Date();
   const row = await prisma.lineAccount.upsert({
     where: { userId: input.userId },
