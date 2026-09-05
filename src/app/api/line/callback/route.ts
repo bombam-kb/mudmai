@@ -19,8 +19,8 @@ import {
 import { refreshLineReachability } from "@/lib/line/reachability";
 import {
   createLineAuthUser,
-  createSupabaseSessionForEmail,
-  createSupabaseSessionForUserId,
+  sessionRedirectForEmail,
+  sessionRedirectForUserId,
 } from "@/lib/line/session";
 import { timingSafeEqualText } from "@/lib/crypto/secret";
 import { rateLimitJson } from "@/lib/http/rate-limit";
@@ -39,6 +39,15 @@ function lineTakenRedirect(
   return redirectTo(origin, locale, intent === "link" ? "/settings" : "/login", "line_taken");
 }
 
+function oauthStateValid(stateParam: string | null, cookieToken: string | undefined) {
+  const state = parseOAuthState(stateParam);
+  if (!state) return null;
+  if (cookieToken && stateParam && !timingSafeEqualText(cookieToken, stateParam)) {
+    return null;
+  }
+  return state;
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const origin = url.origin;
@@ -46,7 +55,8 @@ export async function GET(request: Request) {
   const cookieToken = cookieStore.get(LINE_OAUTH_COOKIE)?.value;
   cookieStore.delete(LINE_OAUTH_COOKIE);
 
-  const state = parseOAuthState(url.searchParams.get("state"));
+  const stateParam = url.searchParams.get("state");
+  const state = oauthStateValid(stateParam, cookieToken);
   const locale = state?.locale === "en" ? "en" : "th";
 
   if (!isLineLoginConfigured() || !isSupabaseConfigured()) {
@@ -66,12 +76,7 @@ export async function GET(request: Request) {
   }
 
   const code = url.searchParams.get("code");
-  if (
-    !code ||
-    !state ||
-    !cookieToken ||
-    !timingSafeEqualText(cookieToken, url.searchParams.get("state") ?? "")
-  ) {
+  if (!code || !state) {
     return redirectTo(origin, locale, "/login", "line");
   }
 
@@ -111,9 +116,13 @@ export async function GET(request: Request) {
     }
 
     if (mapped) {
-      const redirect = redirectTo(origin, locale, state.next);
-      const ok = await createSupabaseSessionForUserId(mapped.userId, redirect);
-      if (!ok) return redirectTo(origin, locale, "/login", "line_session");
+      const redirect = await sessionRedirectForUserId(
+        origin,
+        locale,
+        mapped.userId,
+        state.next,
+      );
+      if (!redirect) return redirectTo(origin, locale, "/login", "line_session");
       await upsertLineAccount({ userId: mapped.userId, lineUserId, reachable });
       await refreshLineReachability(mapped.userId).catch(() => null);
       return redirect;
@@ -142,25 +151,11 @@ export async function GET(request: Request) {
       await upsertLineAccount({ userId: authUserId, lineUserId, reachable });
     }
 
-    const redirect = redirectTo(origin, locale, state.next);
-    const sessionOk = await createSupabaseSessionForEmail(created.email, redirect);
-    if (!sessionOk) return redirectTo(origin, locale, "/login", "line_session");
-
-    if (!authUserId) {
-      const { user } = await getSessionUser();
-      if (!user) return redirectTo(origin, locale, "/login", "line_session");
-      await ensureLineUserProfile({
-        authUserId: user.id,
-        email: created.email,
-        locale,
-        pdpa: state.pdpa,
-        referralCode: state.ref,
-      });
-      await upsertLineAccount({ userId: user.id, lineUserId, reachable });
-    }
-
+    const redirect = await sessionRedirectForEmail(origin, locale, created.email, state.next);
+    if (!redirect) return redirectTo(origin, locale, "/login", "line_session");
     return redirect;
   } catch (error) {
+    console.error("[line-callback]", error);
     if (error instanceof LineLinkTakenError) {
       return lineTakenRedirect(origin, locale, state?.intent);
     }

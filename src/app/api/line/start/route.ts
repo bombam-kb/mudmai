@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import {
   isLineLoginConfigured,
   isSupabaseConfigured,
@@ -49,14 +48,13 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL(`/${locale}/login?error=line_config`, url.origin));
   }
 
-  const cookieStore = await cookies();
-  cookieStore.set(LINE_OAUTH_COOKIE, token, {
+  const response = NextResponse.redirect(authorize);
+  response.cookies.set(LINE_OAUTH_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 600,
   });
-
-  return NextResponse.redirect(authorize);
+  return response;
 }

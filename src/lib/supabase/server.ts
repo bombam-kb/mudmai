@@ -1,7 +1,8 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import type { NextResponse } from "next/server";
 
-export async function createClient() {
+export async function createClient(response?: NextResponse) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -23,13 +24,14 @@ export async function createClient() {
           options: CookieOptions;
         }[],
       ) {
-        try {
-          cookiesToSet.forEach(({ name, value, options }) => {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          try {
             cookieStore.set(name, value, options);
-          });
-        } catch {
-          // Called from a Server Component; middleware refreshes the session.
-        }
+          } catch {
+            // Called from a Server Component; middleware refreshes the session.
+          }
+          response?.cookies.set(name, value, options);
+        });
       },
     },
   });

@@ -1,94 +1,74 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import { cookies } from "next/headers";
-import type { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { safeInternalPath } from "@/lib/http/safe-path";
 import { linePlaceholderEmail } from "@/lib/line/oauth";
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
-async function createRouteHandlerClient(response?: NextResponse) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) return null;
-
-  const cookieStore = await cookies();
-  return createServerClient(url, key, {
-    cookies: {
-      getAll() {
-        return cookieStore.getAll();
-      },
-      setAll(
-        cookiesToSet: {
-          name: string;
-          value: string;
-          options: CookieOptions;
-        }[],
-      ) {
-        cookiesToSet.forEach(({ name, value, options }) => {
-          try {
-            cookieStore.set(name, value, options);
-          } catch {
-            // Route handlers may reject cookieStore.set in some contexts.
-          }
-          response?.cookies.set(name, value, options);
-        });
-      },
-    },
-  });
-}
-
-async function verifyGeneratedLink(
-  supabase: NonNullable<Awaited<ReturnType<typeof createRouteHandlerClient>>>,
-  email: string,
-) {
+async function magicLinkTokenHash(email: string) {
   const admin = createAdminClient();
-  if (!admin) return false;
+  if (!admin) return null;
 
   const normalized = normalizeEmail(email);
   const { data, error } = await admin.auth.admin.generateLink({
     type: "magiclink",
     email: normalized,
   });
-  if (error || !data?.properties) return false;
+  if (error || !data?.properties?.hashed_token) return null;
+  return data.properties.hashed_token;
+}
 
-  const { hashed_token: tokenHash, email_otp: emailOtp, verification_type } = data.properties;
+/** Redirect through /auth/callback so Supabase session cookies attach reliably on mobile. */
+export async function sessionRedirectForEmail(
+  origin: string,
+  locale: "th" | "en",
+  email: string,
+  next: string,
+) {
+  const tokenHash = await magicLinkTokenHash(email);
+  if (!tokenHash) return null;
 
-  if (tokenHash) {
-    const otpType =
-      verification_type === "signup"
-        ? "signup"
-        : verification_type === "email_change_current" ||
-            verification_type === "email_change_new"
-          ? "email_change"
-          : "magiclink";
-    const { error: otpError } = await supabase.auth.verifyOtp({
-      type: otpType as "magiclink",
-      token_hash: tokenHash,
-    });
-    if (!otpError) return true;
-  }
+  const target = safeInternalPath(next, "/home");
+  const callback = new URL("/auth/callback", origin);
+  callback.searchParams.set("token_hash", tokenHash);
+  callback.searchParams.set("type", "magiclink");
+  callback.searchParams.set("next", `/${locale}${target}`);
+  return NextResponse.redirect(callback.toString());
+}
 
-  if (emailOtp) {
-    const { error: otpError } = await supabase.auth.verifyOtp({
-      email: normalized,
-      token: emailOtp,
-      type: "email",
-    });
-    if (!otpError) return true;
-  }
+export async function sessionRedirectForUserId(
+  origin: string,
+  locale: "th" | "en",
+  userId: string,
+  next: string,
+) {
+  const admin = createAdminClient();
+  if (!admin) return null;
 
-  return false;
+  const { data, error } = await admin.auth.admin.getUserById(userId);
+  const email = data?.user?.email;
+  if (error || !email) return null;
+  return sessionRedirectForEmail(origin, locale, email, next);
 }
 
 export async function createSupabaseSessionForEmail(
   email: string,
   response?: NextResponse,
 ) {
-  const supabase = await createRouteHandlerClient(response);
+  const supabase = await createClient(response);
   if (!supabase) return false;
-  return verifyGeneratedLink(supabase, email);
+
+  const tokenHash = await magicLinkTokenHash(email);
+  if (!tokenHash) return false;
+
+  const { error } = await supabase.auth.verifyOtp({
+    type: "magiclink",
+    token_hash: tokenHash,
+  });
+  return !error;
 }
 
 export async function createSupabaseSessionForUserId(
@@ -96,13 +76,12 @@ export async function createSupabaseSessionForUserId(
   response?: NextResponse,
 ) {
   const admin = createAdminClient();
-  const supabase = await createRouteHandlerClient(response);
-  if (!admin || !supabase) return false;
+  if (!admin) return false;
 
   const { data, error } = await admin.auth.admin.getUserById(userId);
   const email = data?.user?.email;
   if (error || !email) return false;
-  return verifyGeneratedLink(supabase, email);
+  return createSupabaseSessionForEmail(email, response);
 }
 
 export async function createLineAuthUser(lineUserId: string, locale: "th" | "en") {
